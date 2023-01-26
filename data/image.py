@@ -1,57 +1,140 @@
 from pathlib import Path
-from data.config import BRAIN_VISA_PATH
+from data.config import BRAIN_VISA_PATH, SEGM_PATH
 import SimpleITK as sitk
+import logging
+import numpy as np
+import sys
+from open3d import io 
 
-class CS_Image:
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler(sys.stdout))
+
+
+class CS_Images:
     
-    def __init__(self, cs_paths:list[str]|None,
+    def __init__(self,
+                 segmentation: str|None,
+                 mesh:bool=False,
                  preload: bool=False) -> None:
         """Constructor for CS_Image class
 
         Args:
-            cs_paths (list[str] | None): List of paths to CS corrected images
+            segmentation (str): Defines whether to also load the segmentations
+                together with images. Can be one of the following:
+                    None: No segmentation will be loaded, only the images
+                    'corrected': Load the post-processed after BrainVisa segmentations
+                    'brainvisa': Load the raw BrainVisa segmentations
+                    'all': Load both the raw and post-processed segmentations
+            mesh: (bool, optional): Whether to load the mesh files. Defaults to False.
             preload (bool, optional): Whether to load all the images at once
                 or load on the go. Defaults to False.
         """
-        
-        self.cs_paths = cs_paths
+        self.segmentation = segmentation        
         self.preload = preload
+        self.mesh = mesh
         
         self.imgs = []
-        self.cs_segms = []
+        self.bvisa_segms = []
+        self.corrected_segms = []
         self.centers = []
         self.caseids = []
         
-        # initilize the list of paths
-        # base on the corrected cs_paths
-        if self.cs_paths is not None:
-            self._init_cs_corrected()
+        self.bvisa_meshes = []
+        self.corrected_meshes = []
+        
+        self._get_paths()
+        if self.preload:
+            self._preload_images()
     
-    def _init_cs_corrected(self):
-        if not self.preload:
-            self.cs_segms = self.cs_paths
-            for c in self.cs_segms:
-                center = str(c).replace(BRAIN_VISA_PATH,
-                                                      '').split('/')[0]
-                caseid = str(c).replace(BRAIN_VISA_PATH,
-                                                      '').split('/')[1]
-                self.centers.append(center)
-                self.caseids.append(caseid)
-                
-                self.imgs.append(Path(BRAIN_VISA_PATH)/f'{center}/{caseid}/t1mri/default_acquisition/{caseid}.nii.gz')
-            
+    
+    def _preload_images(self):
+        raise NotImplementedError
+    
+    def _get_paths(self):
+        subjects_paths = [x for x in Path(BRAIN_VISA_PATH).glob('*/sub-via*') if x.is_dir()]
+        self.imgs = [x/f't1mri/default_acquisition/{x.name}.nii.gz' for x in subjects_paths]
+        imgs_exist = np.asarray([x.exists() for x in self.imgs])
+        
+        lsulci_orig = [x/f'{SEGM_PATH}/LSulci_{x.name}_default_session_best.nii.gz' for x in subjects_paths ]
+        rsulci_orig = [x/f'{SEGM_PATH}/RSulci_{x.name}_default_session_best.nii.gz' for x in subjects_paths ]
+        self.bvisa_segms = list(zip(lsulci_orig, rsulci_orig))
+        bvisa_exist = np.asarray([x[0].exists() and x[1].exists() for x in self.bvisa_segms])
+        
+        lsulci_cleaned = [x/f'{SEGM_PATH}/LSulci_{x.name}_default_session_best_cleaned.nii.gz' for x in subjects_paths ]
+        rsulci_cleaned = [x/f'{SEGM_PATH}/RSulci_{x.name}_default_session_best_cleaned.nii.gz' for x in subjects_paths ]
+        self.corrected_segms = list(zip(lsulci_cleaned, rsulci_cleaned))
+        corrected_exist = np.asarray([x[0].exists() and x[1].exists() for x in self.corrected_segms])
+
+        # count the number of subjects
+        found_subjects = len(self.imgs)        
+        print(f'Found {found_subjects} subjects and {sum(imgs_exist)} MPRAGE images')
+        
+        if self.segmentation == 'brainvisa':
+            self.bvisa_segms = [x for xidx, x in enumerate(self.bvisa_segms) if bvisa_exist[xidx] and imgs_exist[xidx]]
+            self.imgs = [x for xidx, x in enumerate(self.imgs) if imgs_exist[xidx] and bvisa_exist[xidx]]
+            print(f'Found {sum(bvisa_exist)} BrainVisa segmentations from {found_subjects} subjects')
+        
+        elif self.segmentation == 'corrected':
+            self.corrected_segms = [x for xidx, x in enumerate(self.corrected_segms) if corrected_exist[xidx] and imgs_exist[xidx]]
+            self.imgs = [x for xidx, x in enumerate(self.imgs) if imgs_exist[xidx] and corrected_exist[xidx]]
+            print(f'Found {sum(corrected_exist)} corrected segmentations from {found_subjects} subjects')
+        elif self.segmentation == 'all':
+            self.corrected_segms = [x for xidx, x in enumerate(self.corrected_segms) if corrected_exist[xidx] and imgs_exist[xidx] and bvisa_exist[xidx]]
+            self.bvisa_segms = [x for xidx, x in enumerate(self.bvisa_segms) if bvisa_exist[xidx] and imgs_exist[xidx] and corrected_exist[xidx]]
+            self.imgs = [x for xidx, x in enumerate(self.imgs) if imgs_exist[xidx] and bvisa_exist[xidx] and corrected_exist[xidx]]
+            print(f'Found {len(self.imgs)} subjects with both BrainVisa and corrected from {found_subjects} subjects')
+        elif self.segmentation != None:
+            raise ValueError(f'Unknown segmentation type: {self.segmentation}. Should be None, "raw", "brainvisa", "cleaned" or "all"')
+        
+        
     def __len__(self):
-        return len(self.cs_segms)
+        return len(self.imgs)
     
     def __getitem__(self, idx):
         if not self.preload:
+            
             img = sitk.ReadImage(str(self.imgs[idx]))
-            cs_mask = sitk.ReadImage(str(self.cs_segms[idx]))
+            
+            bvisa = None
+            corrected = None
+            bvisa_mesh_lscl = None
+            bvisa_mesh_rscl = None
+            corrected_mesh_lscl = None
+            corrected_mesh_rscl = None
+            
+            caseid = self.imgs[idx].name.split('.')[0]
+            centre = self.imgs[idx].parent.parent.parent.parent.name
+            
+            if self.segmentation == 'brainvisa' or self.segmentation == 'all':
+                lsulci = sitk.ReadImage(str(self.bvisa_segms[idx][0]))
+                rsulci = sitk.ReadImage(str(self.bvisa_segms[idx][1]))*2
+                bvisa = lsulci + rsulci
+                    
+                if self.mesh:
+                    bvisa_mesh_lscl = io.read_triangle_mesh(str(self.bvisa_segms[idx][0]).replace('.nii.gz', '.ply'))
+                    bvisa_mesh_rscl = io.read_triangle_mesh(str(self.bvisa_segms[idx][1]).replace('.nii.gz', '.ply'))
+                    if bvisa_mesh_lscl is None or bvisa_mesh_rscl is None:
+                        raise ValueError(f'Could not load brainvisa mesh for {caseid}')
+            
+            if self.segmentation == 'corrected' or self.segmentation == 'all':
+                lsulci = sitk.ReadImage(str(self.corrected_segms[idx][0]))
+                rsulci = sitk.ReadImage(str(self.corrected_segms[idx][1]))*2
+                corrected = lsulci + rsulci
+                if self.mesh:
+                    corrected_mesh_lscl = io.read_triangle_mesh(str(self.corrected_segms[idx][0]).replace('.nii.gz', '.ply'))
+                    corrected_mesh_rscl = io.read_triangle_mesh(str(self.corrected_segms[idx][1]).replace('.nii.gz', '.ply'))
+                    if corrected_mesh_lscl is None or corrected_mesh_rscl is None:
+                        raise ValueError(f'Could not load corrected mesh for {caseid}')
+            
+            return {'img': img,
+                    'centre': centre,
+                    'caseid': caseid,
+                    'bvisa': bvisa,
+                    'corrected': corrected,
+                    'bvisa_mesh_lscl': bvisa_mesh_lscl,
+                    'bvisa_mesh_rscl': bvisa_mesh_rscl,
+                    'corrected_mesh_lscl': corrected_mesh_lscl,
+                    'corrected_mesh_rscl': corrected_mesh_rscl}
         else:
             raise NotImplementedError
-        return {'img': img,
-                'cs_mask': cs_mask,
-                'center': self.centers[idx],
-                'caseid': self.caseids[idx],
-                'img_path': self.imgs[idx],
-                'cs_mask_path': self.cs_segms[idx]}
+        
