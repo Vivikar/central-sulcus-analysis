@@ -138,3 +138,13 @@ class CS_Images:
         else:
             raise NotImplementedError
         
+    def get_caseidx(self, casename:str):
+        """_summary_
+
+        Args:
+            casename (str): sub-via228
+
+        Returns:
+            _type_: _description_
+        """
+        return np.where([casename in str(x) for x in self.imgs])
