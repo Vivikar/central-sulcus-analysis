@@ -10,3 +10,5 @@ SEGM_PATH = 't1mri/default_acquisition/default_analysis/folds/3.1/default_sessio
 corrected_paths = Path(BRAIN_VISA_PATH)
 corrected_paths = [x for x in corrected_paths.glob(CS_CORRECTED)]
 
+#############
+SAMSEG_PATH = '/mnt/projects/VIA_Vlad/nobackup/MP2RAGE_FS7_2_0_samseg'

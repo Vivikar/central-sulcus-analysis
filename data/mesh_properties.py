@@ -10,6 +10,9 @@ import open3d as o3d
 #  'mesh_properties',
 # 'holes_filled_volume',
 # ]
+
+# TODO: Add spike Hausdorf distance measure
+
 ALL_PROPERTIES = ['cluster_properties',
                   'mesh_properties',
                   'holes_filled_volume']
@@ -59,3 +62,12 @@ class MeshAnalyzer:
         if not filled.is_watertight():
             return {'holes_filled_volume':-1}
         return {'holes_filled_volume':filled.get_volume()}
+    
+    @staticmethod
+    def hausdorff_distance(mesh1:o3d.geometry.TriangleMesh,
+                           smooth_iter:3) -> dict:
+        
+        dist = 0
+        return {'hausdorff_distance':dist}
+    
+    
