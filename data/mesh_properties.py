@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import sys
 import open3d as o3d
-
+from utils.mesh import dihedral_angle
 # Mesh properties to analyze
 # ['cluster_properties',
 #  'mesh_properties',
@@ -15,7 +15,8 @@ import open3d as o3d
 
 ALL_PROPERTIES = ['cluster_properties',
                   'mesh_properties',
-                  'holes_filled_volume']
+                  'holes_filled_volume',
+                  'dihedral_angles']
 class MeshAnalyzer:
     def __init__(self, properties:list[str]=ALL_PROPERTIES) -> None:
         self.properties = properties
@@ -70,4 +71,24 @@ class MeshAnalyzer:
         dist = 0
         return {'hausdorff_distance':dist}
     
-    
+    @staticmethod
+    def dihedral_angles(mesh:o3d.geometry.TriangleMesh) -> dict:
+        mesh.compute_triangle_normals()
+        triangles = np.asarray(mesh.triangles)
+        vertices = np.asarray(mesh.vertices)
+        triangle_normals = np.asarray(mesh.triangle_normals)
+        
+        edges = np.concatenate([triangles[:, [0, 1]],
+                                triangles[:, [1, 2]],
+                                triangles[:, [2, 0]]], axis=0)
+        edges = np.sort(edges, axis=1)
+        edges = np.unique(edges, axis=0)
+        
+        edge_dihedral_angles = np.zeros((edges.shape[0]))
+        
+        for edgidx, edg in enumerate(edges):
+            t1n = triangle_normals[edg[0]]
+            t2n = triangle_normals[edg[1]]
+            edge_dihedral_angles[edgidx] = dihedral_angle(t1n, t2n)
+        
+        return {'edge_dihedral_angles':edge_dihedral_angles}
