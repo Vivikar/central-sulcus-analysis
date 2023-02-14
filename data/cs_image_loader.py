@@ -13,7 +13,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 class CS_Images:
     
     def __init__(self,
-                 segmentation: str,
+                 segmentation: str|None,
                  mesh:bool=False,
                  preload: bool=False) -> None:
         """Constructor for CS_Image class
