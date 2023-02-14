@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
 from skimage import morphology, measure
-from utils.general import min_max_norm, get_corss3d_SE
+from utils.general import min_max_norm
+from utils.mesh import get_corss3d_SE
 from tqdm import tqdm
 import SimpleITK as sitk
 import pandas as pd
-from data.image import CS_Images
+from data.cs_image_loader import CS_Images
 
 # Junction templates in 2D used to find junctions of the CS
 junc1 = [[0, -1,  0],

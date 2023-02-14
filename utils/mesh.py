@@ -1,4 +1,18 @@
+"""Contains functions and utilities for mesh processing and analysis
+"""
 import numpy as np
+
+def get_corss3d_SE():
+    """Returns the structuring element for 3D cross
+        as np.array of shape (3, 3, 3)"""
+    se_cross3d = np.zeros((3, 3, 3))
+    se_cross3d[0, 1, 1] = 1
+    se_cross3d[1, :, 1] = 1
+    se_cross3d[1, 1, :] = 1
+
+    se_cross3d[2, 1, 1] = 1
+    return se_cross3d
+
 
 def dihedral_angle(n1, n2):
     """Dihedral angle ϕ of an edge to be the angle between the

@@ -1,5 +1,8 @@
+"""Script to perform exploratory data analysis on the CS shapes dataset.
+Creates a csv file with the results of the analysis.
+"""
 from tqdm import tqdm
-from data.image import CS_Images
+from data.cs_image_loader import CS_Images
 from data.mesh_properties import MeshAnalyzer
 from data.segmentation_properties import SegmAnalyzer
 import pandas as pd

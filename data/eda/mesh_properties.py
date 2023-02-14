@@ -5,6 +5,7 @@ import numpy as np
 import sys
 import open3d as o3d
 from utils.mesh import dihedral_angle
+
 # Mesh properties to analyze
 # ['cluster_properties',
 #  'mesh_properties',

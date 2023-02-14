@@ -13,7 +13,6 @@ import nibabel as nb
 # 'holes_filled_volume',
 # ]
 
-# TODO: Add spike Hausdorf distance measure
 
 ALL_PROPERTIES = ['cs_segmentation_overlap']
 class SegmAnalyzer:
