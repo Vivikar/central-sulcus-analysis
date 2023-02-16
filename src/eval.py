@@ -10,7 +10,7 @@ import pandas as pd
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from tqdm import tqdm
-from data.dataset import CS_DataModule
+from data.bvisa_dm import CS_DataModule
 from models.UNet3D import UNet3D
 
 import yaml

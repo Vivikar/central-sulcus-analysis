@@ -1,0 +1,10 @@
+_target_: src.data.bvisa_dm.CS_DataModule
+
+dataset_cfg:
+  dataset: bvisa
+  target: sulci
+  dataset_path: ${paths.data_dir}/brainvisa
+
+train_batch_size: 1
+validation_batch_size: 1
+num_workers: 1
