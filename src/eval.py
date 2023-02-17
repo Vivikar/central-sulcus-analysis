@@ -1,82 +1,57 @@
-from pathlib import Path
+from typing import List, Tuple
 
-import numpy as np
-from pytorch_lightning import LightningDataModule, Trainer, LightningModule
+import hydra
+import pyrootutils
+from omegaconf import DictConfig
+from pytorch_lightning import LightningDataModule, LightningModule, Trainer
+from pytorch_lightning.loggers import Logger
+
+pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+
+import src.utils.default as utils
+import matplotlib.pyplot as plt
 
 
-from pytorch_lightning.loggers import TensorBoardLogger
-from pathlib import Path
-import pandas as pd
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+log = utils.get_pylogger(__name__)
 
-from tqdm import tqdm
-from data.bvisa_dm import CS_DataModule
-from models.UNet3D import UNet3D
+EVAL_PATH = '../logs/test_train/runs/2023-02-17_13-03-42/.hydra'
+CHKPT_PATH = '/mrhome/vladyslavz/git/central-sulcus-analysis/logs/test_train/runs/2023-02-17_13-03-42/checkpoints/epoch_001.ckpt'
 
-import yaml
-import torch 
 
-import subprocess
-
-def get_gpu_memory_map():
-    """Get the current gpu usage.
-
-    Returns
-    -------
-    usage: dict
-        Keys are device ids as integers.
-        Values are memory usage as integers in MB.
+def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
+    """Evaluates given checkpoint on a datamodule testset.
+    This method is wrapped in optional @task_wrapper decorator which applies extra utilities
+    before and after the call.
+    Args:
+        cfg (DictConfig): Configuration composed by Hydra.
+    Returns:
+        Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
     """
-    result = subprocess.check_output(
-        [
-            'nvidia-smi'
-        ], encoding='utf-8')
-    # Convert lines into a dictionary
-    
-    return result
+    cfg.ckpt_path = CHKPT_PATH
+    assert cfg.ckpt_path
 
-torch.set_float32_matmul_precision('medium')
+    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
-def main():
-    # # read the config file
-    # with open('config.yaml', 'r') as f:
-    #     cfg = list(yaml.load_all(f, yaml.SafeLoader))[0]
+    log.info(f"Instantiating model <{cfg.model._target_}>")
+    model: LightningModule = hydra.utils.instantiate(cfg.model)
 
-    # saves top-K checkpoints based on "valid_dsc" metric
-    # checkpoint_callback = ModelCheckpoint(save_top_k=5,
-    #                                       monitor="valid_dsc_macro_epoch",
-    #                                       mode="max",
-    #                                       filename="{epoch:02d}-{valid_dsc_macro_epoch:.4f}")
-    # # enable early stopping (NOT USED RN)
-    # early_stop_callback = EarlyStopping(monitor="valid_dsc_macro_epoch",
-    #                                     min_delta=0.0001,
-    #                                     patience=10,
-    #                                     verbose=False,
-    #                                     mode="max")
-    # print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
-    # print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
-    # print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
-    print('beg', get_gpu_memory_map())
-    cfg = {'exp_name': 'test'}
+    log.info("Instantiating loggers...")
+    logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
+
+    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)
+
+    for batch in datamodule.val_dataloader():
+        image = batch['image']
+        target = batch['target']
+    plt.imshow(image[0, 0, 80, :, :])
+    plt.imshow(target[0, 0, 80, :, :])
 
     
-    # prepare data
-    data_module = CS_DataModule()
-    # data_module = data_module.data
-    data_module.prepare_data()
-
-    # get model and trainer
-    model = UNet3D()
-
-    traindl = data_module.train_dataloader()
-    for batch in tqdm(traindl):
-        break
-    image = batch['image']
-    print('img shape', image.shape)
-
-    forward = model(image)
-    print('forw shape', forward.shape)
-    print('after forward', get_gpu_memory_map())
-
-if __name__ == '__main__':
+    
+@hydra.main(version_base="1.3", config_path=EVAL_PATH, config_name="config.yaml")
+def main(cfg: DictConfig) -> None:
+    evaluate(cfg)
+if __name__ == "__main__":
     main()

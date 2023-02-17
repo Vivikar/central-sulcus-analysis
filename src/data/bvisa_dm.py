@@ -16,6 +16,7 @@ class CS_Dataset(Dataset):
     def __init__(self,
                  dataset: str,
                  split: str,
+                 images: str,
                  target: str,
                  dataset_path: str):
         """Constructor for CS_Dataset class
@@ -23,6 +24,7 @@ class CS_Dataset(Dataset):
         Args:
             dataset (str): Dataset name. Either 'bvisa' or .
             split (str): 'train', 'validation' or 'test' based on the splits.py.
+            data (str): 'folds', 'skull_stripped' to train on fold skeletons or skull-stripped images.
             target (str, optional): Which image/object to load as target. Defaults to 'sulci'.
             dataset_path (str | None, optional): Path to the dataset folder with the
                 directories of subjects in BrainVisa format. Defaults to None.
@@ -30,6 +32,7 @@ class CS_Dataset(Dataset):
 
         # save dataset hyperparameters
         self.target = target
+        self.images = images
         self.dataset = dataset
         self.split = split
         self.dataset_path = Path(dataset_path)
@@ -61,7 +64,17 @@ class CS_Dataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        image = sitk.GetArrayFromImage(sitk.ReadImage(str(self.img_paths[idx])))
+        if self.images == 'skull_stripped':
+            image = sitk.GetArrayFromImage(sitk.ReadImage(str(self.img_paths[idx])))
+        elif self.images == 'folds':
+            folds_path = str(self.img_paths[idx])
+            lfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Lskeleton_')
+            rfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Rskeleton_')
+
+            image = sitk.GetArrayFromImage(sitk.ReadImage(lfold)) +\
+                    sitk.GetArrayFromImage(sitk.ReadImage(rfold))
+        else:
+            raise ValueError(f'Images: {self.images} not Implemented')
         target = None
 
         caseid = self.img_paths[idx].parent.parent.parent.name

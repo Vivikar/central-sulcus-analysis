@@ -1,7 +1,7 @@
 # @package _global_
 
 # task name, determines output directory path
-task_name: "test_train"
+task_name: "test_folds"
 
 # tags to help you identify your experiments
 tags: ["dev"]

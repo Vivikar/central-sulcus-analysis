@@ -25,11 +25,11 @@ class BasicUNet3D(pl.LightningModule):
         self.criterion = loss_function
 
         # metrics to track
-        self.train_dsc = torchmetrics.Dice(ignore_index=0)
-        self.validation_dsc = torchmetrics.Dice(ignore_index=0)
-        self.test_dsc = torchmetrics.Dice(ignore_index=0)
+        self.train_dsc = torchmetrics.Dice()
+        self.val_dsc = torchmetrics.Dice()
+        self.test_dsc = torchmetrics.Dice()
 
-        self.validation_dsc_best = MaxMetric()
+        self.val_dsc_best = MaxMetric()
 
         # for averaging loss across batches
         self.test_loss = MeanMetric()
@@ -40,7 +40,7 @@ class BasicUNet3D(pl.LightningModule):
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
         # so we need to make sure val_acc_best doesn't store accuracy from these checks
-        self.validation_dsc_best.reset()
+        self.val_dsc_best.reset()
 
     def training_step(self, batch, batch_idx):
 
@@ -77,8 +77,8 @@ class BasicUNet3D(pl.LightningModule):
                  on_epoch=True, prog_bar=True,
                  logger=True, batch_size=batch_size)
 
-        self.validation_dsc(y_hat, y)
-        self.log('val/dsc', self.validation_dsc,
+        self.val_dsc(y_hat, y)
+        self.log('val/dsc', self.val_dsc,
                  on_step=True,  on_epoch=True,
                  prog_bar=True, logger=True,
                  batch_size=batch_size)
@@ -87,14 +87,14 @@ class BasicUNet3D(pl.LightningModule):
 
     def validation_epoch_end(self, outputs: list):
         # get current val dsc
-        dsc = self.validation_dsc.compute()
+        dsc = self.val_dsc.compute()
 
         # update best so far val dsc
-        self.validation_dsc_best(dsc)
+        self.val_dsc_best(dsc)
 
-        # log `validation_dsc_best` as a value through `.compute()` method, instead
+        # log `val_dsc_best` as a value through `.compute()` method, instead
         # of as a metric object otherwise metric would be reset by lightning after each epoch
-        self.log("val/dsc_best", self.validation_dsc_best.compute(), prog_bar=True)
+        self.log("val/dsc_best", self.val_dsc_best.compute(), prog_bar=True)
 
     def test_step(self, batch, batch_idx: int):
         x = batch['image']
@@ -106,7 +106,7 @@ class BasicUNet3D(pl.LightningModule):
         loss = self.criterion(y_hat, y)
         # update and log metrics
         self.test_loss(loss)
-        self.validation_dsc(y_hat, y)
+        self.val_dsc(y_hat, y)
         self.log("test/loss", self.test_loss, on_step=False,
                  on_epoch=True, prog_bar=True, batch_size=batch_size)
         self.log("test/dsc", self.test_dsc, on_step=False,

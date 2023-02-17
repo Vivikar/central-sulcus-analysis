@@ -2,6 +2,7 @@ _target_: src.data.bvisa_dm.CS_DataModule
 
 dataset_cfg:
   dataset: bvisa
+  images: folds # folds skull_stripped
   target: sulci
   dataset_path: ${paths.data_dir}/brainvisa
 

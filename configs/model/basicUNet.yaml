@@ -3,7 +3,7 @@ _target_: src.models.UNet3D.BasicUNet3D
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.0001
+  lr: 0.01
   weight_decay: 0.0
 
 scheduler:
@@ -29,4 +29,4 @@ net:
 loss_function:
   _target_: monai.losses.DiceLoss
   to_onehot_y: True
-  include_background: False
+  include_background: True

@@ -17,7 +17,7 @@ log = utils.get_pylogger(__name__)
 
 torch.set_float32_matmul_precision('medium')
 
-# @utils.task_wrapper
+@utils.task_wrapper
 def train(cfg: DictConfig) -> Tuple[dict, dict]:
     """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
     training.
