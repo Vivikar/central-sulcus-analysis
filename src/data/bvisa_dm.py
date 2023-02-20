@@ -11,6 +11,7 @@ from src.data.splits import bvisa_splits
 
 logger = logging.getLogger(__name__)
 
+lab_map = {1: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6, 9: 7, 10: 8, 11: 9, 12: 10, 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 17, 20: 18, 21: 19, 22: 20, 23: 21, 24: 22, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 29, 32: 30, 33: 31, 34: 32, 35: 33, 36: 34, 37: 35, 38: 36, 39: 37, 40: 38, 41: 39, 42: 40, 43: 41, 44: 42, 45: 43, 46: 44, 47: 45, 48: 46, 49: 47, 50: 48, 51: 49, 52: 50, 53: 51, 54: 52, 55: 53, 56: 54, 57: 55, 58: 56, 59: 57, 60: 58, 61: 59, 62: 60, 63: 61, 64: 62}
 
 class CS_Dataset(Dataset):
     def __init__(self,
@@ -71,8 +72,10 @@ class CS_Dataset(Dataset):
             lfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Lskeleton_')
             rfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Rskeleton_')
 
-            image = sitk.GetArrayFromImage(sitk.ReadImage(lfold)) +\
-                    sitk.GetArrayFromImage(sitk.ReadImage(rfold))
+            image = sitk.GetArrayFromImage(sitk.ReadImage(lfold)>11) #+\
+                    # sitk.GetArrayFromImage(sitk.ReadImage(rfold)>11)
+            image = (image>0).astype(np.int16)
+
         else:
             raise ValueError(f'Images: {self.images} not Implemented')
         target = None
@@ -81,17 +84,20 @@ class CS_Dataset(Dataset):
 
         if self.target == 'sulci':
             lsulci = sitk.ReadImage(str(self.target_paths[idx][0]))
-            rsulci = sitk.ReadImage(str(self.target_paths[idx][1]))
-            target = lsulci + rsulci
+            # rsulci = sitk.ReadImage(str(self.target_paths[idx][1]))
+            target = lsulci #+ rsulci
             target = sitk.GetArrayFromImage(target)
 
-        target = ((target == 48) | (target == 70)).astype(np.uint8)
-
+        # target = ((target == 48) | (target == 70)).astype(np.int16)
+        target_remapped = np.zeros_like(target)
+        for lab, new_lab in lab_map.items():
+            target_remapped[target == lab] = new_lab
+        
         # add signle channel dimension
         image = np.expand_dims(image, axis=0)
-        target = np.expand_dims(target, axis=0)
+        # target = np.expand_dims(target, axis=0)
         image = torch.Tensor(image)
-        target = torch.tensor(target, dtype=torch.long)
+        target = torch.tensor(target_remapped, dtype=torch.long)
         return {'image': image, 'target': target, 'caseid': caseid}
 
 

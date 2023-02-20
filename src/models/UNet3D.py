@@ -51,7 +51,13 @@ class BasicUNet3D(pl.LightningModule):
 
         y_hat = self.net(x)
 
-        loss = self.criterion(y_hat, y)
+        # # mask out the non-fold voxels
+        folds_mask = (x != 0)
+
+        y_hat_masked = y_hat[:, :, folds_mask[0][0]]
+        y_masked = y[:, folds_mask[0][0]]
+        loss = self.criterion(y_hat_masked, y_masked)
+        # loss = self.criterion(y_hat, y)
 
         self.log("train/loss", loss, on_step=False,
                  on_epoch=True, prog_bar=True,
