@@ -7,9 +7,10 @@ defaults:
 
 model_checkpoint:
   dirpath: ${paths.output_dir}/checkpoints
-  filename: "epoch_{epoch:03d}"
+  filename: "epoch-{epoch:03d})_valdice-{val/dsc:.3f}"
   monitor: "val/dsc"
   mode: "max"
+  save_top_k: 3
   save_last: True
   auto_insert_metric_name: False
 

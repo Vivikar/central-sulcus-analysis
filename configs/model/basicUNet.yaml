@@ -1,9 +1,11 @@
 _target_: src.models.UNet3D.BasicUNet3D
 
+lr: 0.001 # CHANGE HERE
+out_channels: 65 # CHANGE HERE
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.0001
+  lr: 0.001 # AND HERE MAYBE???????
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true
@@ -12,18 +14,26 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.unet3d.model.UNet3D
-  # spatial_dims: 3
+  _target_: monai.networks.nets.BasicUNet
+  spatial_dims: 3
   in_channels: 1
-  out_channels: 63
-  final_sigmoid: False
-  f_maps:
-    - 8
-    - 16
+  out_channels: 65 # CHANGE HERE
+  features:
+    - 32
+    - 32
+    - 64
+    - 128
+    - 256
     - 32
 
+# loss_function:
+#   _target_: torch.nn.CrossEntropyLoss
+#   ignore_index: 0
+
 loss_function:
-  _target_: torch.nn.CrossEntropyLoss
-  # ignore_index: 0
-  # to_onehot_y: True
-  # include_background: True
+  _target_: monai.losses.MaskedDiceLoss
+  to_onehot_y: True # should be true of include_background is false
+  # because first channel from target_y is excluded
+  softmax: True
+  jaccard: False
+  include_background: False

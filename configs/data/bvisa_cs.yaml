@@ -2,14 +2,14 @@ _target_: src.data.bvisa_dm.CS_DataModule
 
 dataset_cfg:
   dataset: bvisa
-  input: skull_stripped # sulci_skeletons / left_skeleton / right_skeleton / skull_stripped
-  target: all_sulci_bin # all_sulci_bin/ folds left_sulci / right_sulci / central_sulcus
+  input: left_skeleton # sulci_skeletons / left_skeleton / right_skeleton / skull_stripped
+  target: left_sulci # all_sulci_bin/  left_sulci / right_sulci / central_sulcus
   dataset_path: ${paths.data_dir}/brainvisa
   resample: # if None no resampling
     - 2
     - 2 
     - 2  
-  crop2content: False # wether to crop the image to the content
+  crop2content: True # wether to crop the image to the content
 
 train_batch_size: 1
 validation_batch_size: 1

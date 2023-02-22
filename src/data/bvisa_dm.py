@@ -7,7 +7,8 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning.core import LightningDataModule
 import os
-from src.data.splits import bvisa_splits
+from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
+                             bvisa_right_sulci_labels, bvisa_sulci_names)
 from src.utils.general import crop_image_to_content, resample_volume
 
 logger = logging.getLogger(__name__)
@@ -173,13 +174,18 @@ class CS_Dataset(Dataset):
         target = sitk.GetArrayFromImage(target)
 
         # remap labels for the target if more than 1
-        target_labels = np.unique(target)
-        if len(target_labels) > 2:
+        if self.target == 'left_sulci':
             new_target = np.zeros_like(target)
-            for new_lab, old_lab in enumerate(target_labels):
-                new_target[target == old_lab] = new_lab
+            for new_label, orig_label in enumerate(bvisa_left_sulci_labels):
+                new_target[target == orig_label] = new_label + 1
+            target = new_target
+        elif self.target == 'right_sulci':
+            new_target = np.zeros_like(target)
+            for new_label, orig_label in enumerate(bvisa_right_sulci_labels):
+                new_target[target == orig_label] = new_label + 1
             target = new_target
 
+        # crop to content
         if self.crop2content:
             image, min_coords, max_coords = crop_image_to_content(image)
             target, _, __ = crop_image_to_content(target, min_coords, max_coords)

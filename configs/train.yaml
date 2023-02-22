@@ -1,7 +1,7 @@
 # @package _global_
 
 # task name, determines output directory path
-task_name: "test_folds_all_labels"
+task_name: "i-lsk-t-lsulc-l-dice"
 
 # tags to help you identify your experiments
 tags: ["dev"]
@@ -18,7 +18,6 @@ ckpt_path: null
 
 # seed for random number generators in pytorch, numpy and python.random
 seed: null
-
 
 
 # specify here default configuration
