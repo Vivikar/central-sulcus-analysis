@@ -8,35 +8,54 @@ from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning.core import LightningDataModule
 import os
 from src.data.splits import bvisa_splits
+from src.utils.general import crop_image_to_content, resample_volume
 
 logger = logging.getLogger(__name__)
 
-lab_map = {1: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6, 9: 7, 10: 8, 11: 9, 12: 10, 13: 11, 14: 12, 15: 13, 16: 14, 17: 15, 18: 16, 19: 17, 20: 18, 21: 19, 22: 20, 23: 21, 24: 22, 25: 23, 26: 24, 27: 25, 28: 26, 29: 27, 30: 28, 31: 29, 32: 30, 33: 31, 34: 32, 35: 33, 36: 34, 37: 35, 38: 36, 39: 37, 40: 38, 41: 39, 42: 40, 43: 41, 44: 42, 45: 43, 46: 44, 47: 45, 48: 46, 49: 47, 50: 48, 51: 49, 52: 50, 53: 51, 54: 52, 55: 53, 56: 54, 57: 55, 58: 56, 59: 57, 60: 58, 61: 59, 62: 60, 63: 61, 64: 62}
 
 class CS_Dataset(Dataset):
     def __init__(self,
                  dataset: str,
                  split: str,
-                 images: str,
+                 input: str,
                  target: str,
-                 dataset_path: str):
+                 dataset_path: str,
+                 resample=None,
+                 crop2content: bool = False):
         """Constructor for CS_Dataset class
 
         Args:
-            dataset (str): Dataset name. Either 'bvisa' or .
+            dataset (str): Dataset name. Only 'bvisa' supported for now. .
             split (str): 'train', 'validation' or 'test' based on the splits.py.
-            data (str): 'folds', 'skull_stripped' to train on fold skeletons or skull-stripped images.
-            target (str, optional): Which image/object to load as target. Defaults to 'sulci'.
+
+            input (str): Defines value for the 'image' key. One of the following
+                'sulci_skeletons' - load  both l/r sulci skeletons (as in BrainVisa paper)
+                'left_skeleton' - load left hemisphere sulci skeleton
+                'right_skeleton' - load right hemisphere sulci skeleton
+                'skull_stripped' - skull-stripped MP-RAGE images.
+
+            target (str, optional): Which image/object to load as target. One of the following:
+                'left_sulci' - load left hemisphere sulci labels
+                'right_sulci' - load right hemisphere sulci labels
+                'all_sulci_bin' - load left and right hemisphere sulci labels and binarize them
+                'central_sulcus' - load central sulcus binary labels
+
             dataset_path (str | None, optional): Path to the dataset folder with the
                 directories of subjects in BrainVisa format. Defaults to None.
+
+            resample (list[x, y, z] | None, optional): Resample the images to a given resolution.
+
+            crop2content (bool, optional): Crop the images to the content of the image.
         """
 
         # save dataset hyperparameters
         self.target = target
-        self.images = images
+        self.input = input
         self.dataset = dataset
         self.split = split
         self.dataset_path = Path(dataset_path)
+        self.resample = list(resample) if resample is not None else None
+        self.crop2content = crop2content
 
         # load corresponding image and target paths
         self.img_paths = []
@@ -49,56 +68,128 @@ class CS_Dataset(Dataset):
 
     def _load_bvisa(self):
         sulci_path = os.environ.get('SULCI_PATH_PREFIX')
+        skeleton_path = os.environ.get('SKELETON_PATH_PREFIX')
 
         for subj in self.dataset_path.iterdir():
             if subj.is_dir() and subj.name in bvisa_splits[self.split]:
-                self.img_paths.append(subj/f't1mri/t1/{subj.name}.nii.gz')
 
-                if self.target == 'sulci':
+                # get image input paths
+                image_paths = []
+                if self.input == 'sulci_skeletons' or self.input == 'left_skeleton':
+                    lsulci = subj/f'{skeleton_path}/Lskeleton_{subj.name}.nii.gz'
+                    image_paths.append(lsulci)
+
+                if self.input == 'sulci_skeletons' or self.input == 'right_skeleton':
+                    rsulci = subj/f'{skeleton_path}/Rskeleton_{subj.name}.nii.gz'
+                    image_paths.append(rsulci)
+
+                if self.input == 'skull_stripped':
+                    image_paths.append(subj/f't1mri/t1/{subj.name}.nii.gz')
+
+                self.img_paths.append(image_paths)
+
+                # get image target paths
+                target_paths = []
+                if self.target == 'left_sulci' or self.target == 'all_sulci_bin' \
+                        or self.target == 'central_sulcus':
                     lsulci = subj/f'{sulci_path}/LSulci_{subj.name}_base2018_manual.nii.gz'
+                    target_paths.append(lsulci)
+
+                if self.target == 'right_sulci' or self.target == 'all_sulci_bin' \
+                        or self.target == 'central_sulcus':
                     rsulci = subj/f'{sulci_path}/RSulci_{subj.name}_base2018_manual.nii.gz'
-                    self.target_paths.append((lsulci, rsulci))
-                else:
-                    raise ValueError(f'Target: {self.target} not Implemented')
+                    target_paths.append(rsulci)
+
+                self.target_paths.append(target_paths)
 
     def __len__(self):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        if self.images == 'skull_stripped':
-            image = sitk.GetArrayFromImage(sitk.ReadImage(str(self.img_paths[idx])))
-        elif self.images == 'folds':
-            folds_path = str(self.img_paths[idx])
-            lfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Lskeleton_')
-            rfold = folds_path.replace('t1mri/t1/', 't1mri/t1/default_analysis/segmentation/Rskeleton_')
+        image, target = None, None
 
-            image = sitk.GetArrayFromImage(sitk.ReadImage(lfold)>11) #+\
-                    # sitk.GetArrayFromImage(sitk.ReadImage(rfold)>11)
-            image = (image>0).astype(np.int16)
+        # load target image
+        if self.input == 'left_skeleton' or self.input == 'right_skeleton':
+            image = sitk.ReadImage(str(self.img_paths[idx][0]))
+            image = sitk.Cast(image > 11, sitk.sitkInt16)
 
+        elif self.input == 'sulci_skeletons':
+            limage = sitk.ReadImage(str(self.img_paths[idx][0]))
+            limage = sitk.Cast(limage > 11, sitk.sitkInt16)
+
+            rimage = sitk.ReadImage(str(self.img_paths[idx][1]))
+            rimage = sitk.Cast(rimage > 11, sitk.sitkInt16)
+
+            image = sitk.Cast(((limage + rimage) > 0), sitk.sitkFloat32)
+
+        elif self.input == 'skull_stripped':
+            image = sitk.ReadImage(str(self.img_paths[idx][0]))
         else:
-            raise ValueError(f'Images: {self.images} not Implemented')
-        target = None
+            raise ValueError(f'Input: {self.input} not implemented')
 
-        caseid = self.img_paths[idx].parent.parent.parent.name
+        # load target image
+        if self.target == 'left_sulci' or self.target == 'right_sulci':
+            target = sitk.ReadImage(str(self.target_paths[idx][0]))
 
-        if self.target == 'sulci':
-            lsulci = sitk.ReadImage(str(self.target_paths[idx][0]))
-            # rsulci = sitk.ReadImage(str(self.target_paths[idx][1]))
-            target = lsulci #+ rsulci
-            target = sitk.GetArrayFromImage(target)
+        elif self.target == 'all_sulci_bin':
+            ltarget = sitk.ReadImage(str(self.target_paths[idx][0])) > 0
+            rtarget = sitk.ReadImage(str(self.target_paths[idx][1])) > 0
+            target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
 
-        # target = ((target == 48) | (target == 70)).astype(np.int16)
-        target_remapped = np.zeros_like(target)
-        for lab, new_lab in lab_map.items():
-            target_remapped[target == lab] = new_lab
-        
-        # add signle channel dimension
-        image = np.expand_dims(image, axis=0)
-        # target = np.expand_dims(target, axis=0)
-        image = torch.Tensor(image)
-        target = torch.tensor(target_remapped, dtype=torch.long)
+        elif self.target == 'central_sulcus':
+            ltarget = sitk.ReadImage(str(self.target_paths[idx][0])) == 48
+            rtarget = sitk.ReadImage(str(self.target_paths[idx][1])) == 70
+            target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
+
+        # pre-process images
+        image, target = self._preprocess(image, target)
+
+        # get caseid
+        caseid = self.img_paths[idx][0].parent.parent.parent.name
+
         return {'image': image, 'target': target, 'caseid': caseid}
+
+    def _preprocess(self, image, target):
+        """Converts from sitk.Image to torch.Tensor and
+           ensures that targets have proper labels and
+           images are normalized.
+
+        Args:
+            image (sitk.Image): Input image.
+            target (sitk.Image): Target image.
+
+        Returns:
+            tuple(Tensor, Tensor): Pre-processed image and target.
+        """
+        # resample if needed
+        if self.resample is not None:
+            image_interpolator = sitk.sitkLinear if self.input == 'skull_stripped' \
+                else sitk.sitkNearestNeighbor
+            image = resample_volume(image, self.resample, image_interpolator)
+            target = resample_volume(target, self.resample,
+                                     interpolator=sitk.sitkNearestNeighbor)
+        # convert to numpy and crop
+        image = sitk.GetArrayFromImage(image)
+        target = sitk.GetArrayFromImage(target)
+
+        # remap labels for the target if more than 1
+        target_labels = np.unique(target)
+        if len(target_labels) > 2:
+            new_target = np.zeros_like(target)
+            for new_lab, old_lab in enumerate(target_labels):
+                new_target[target == old_lab] = new_lab
+            target = new_target
+
+        if self.crop2content:
+            image, min_coords, max_coords = crop_image_to_content(image)
+            target, _, __ = crop_image_to_content(target, min_coords, max_coords)
+
+        # min-max normalization of the image
+        image = (image - image.min()) / (image.max() - image.min())
+
+        # add channel dimension to the image
+        image = np.expand_dims(image, axis=0)
+        return torch.Tensor(image), torch.tensor(target, dtype=torch.long)
 
 
 class CS_DataModule(LightningDataModule):
