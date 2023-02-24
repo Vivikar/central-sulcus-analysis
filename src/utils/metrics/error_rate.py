@@ -39,13 +39,13 @@ class SulciErrorLocal(torchmetrics.Metric):
                     FN = torch.sum((preds != ch) & (target == ch))
                     # this will be the total error from all batches
                     sulci_local_errors.append((FP + FN) / (FP + FN + TP + self.epsilon))
-            total_sulci_errors.append(sulci_local_errors)
+            total_sulci_errors.append(torch.tensor(sulci_local_errors))
 
         # mean error per batch per sulci
-        total_sulci_errors = np.mean(np.stack(total_sulci_errors), axis=0)
+        total_sulci_errors = torch.mean(torch.stack(total_sulci_errors), axis=0)
 
         # store the mean error per sulcus of a batch
-        self.sulci_errors.append(torch.tensor(total_sulci_errors))
+        self.sulci_errors.append(torch.Tensor(total_sulci_errors))
 
     def compute(self):
         """ Returns an array with average error for each sulcus per epoch"""
@@ -91,9 +91,9 @@ class SulciErrorSubject(torchmetrics.Metric):
                     sulci_sizes.append(FN + TP)
                     sulci_errors.append((FP + FN) / (FP + FN + 2*TP + self.epsilon))
 
-            sulci_sizes = np.array(sulci_sizes)
-            sulci_errors = np.array(sulci_errors)
-            batch_errors += np.sum(sulci_errors * (sulci_sizes / np.sum(sulci_sizes)))
+            sulci_sizes = torch.Tensor(sulci_sizes)
+            sulci_errors = torch.Tensor(sulci_errors)
+            batch_errors += torch.sum(sulci_errors * (sulci_sizes / torch.sum(sulci_sizes)))
         self.sulci_errors += batch_errors
         self.total += preds.shape[0]
 

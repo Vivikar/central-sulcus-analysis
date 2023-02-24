@@ -58,7 +58,7 @@ class CS_Dataset(Dataset):
         self.dataset = dataset
         self.split = split
         self.dataset_path = Path(dataset_path)
-        self.resample = list(resample) if resample is not None else None
+        self.resample = tuple(resample) if resample is not None else None
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
 

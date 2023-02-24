@@ -6,7 +6,7 @@ out_channels: 2 # CHANGE HERE
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.01 # AND HERE MAYBE???????
+  lr: 0.01 # CHANGE HERE
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
   _partial_: true

@@ -5,6 +5,8 @@ import torchmetrics
 from monai.networks.nets import BasicUNet
 from torchmetrics import MaxMetric, MeanMetric
 
+from src.utils.metrics.error_rate import SulciErrorLocal, SulciErrorSubject
+
 class BasicUNet3D(pl.LightningModule):
     def __init__(
             self,
@@ -28,18 +30,25 @@ class BasicUNet3D(pl.LightningModule):
         self.learning_rate = lr
         self.out_channels = out_channels
         avg_type = 'macro' if self.out_channels > 2 else 'micro'
-        
+
         # metrics to track (ignore_index=0 is for background class)
         self.train_dsc = torchmetrics.Dice(ignore_index=0,
                                            average=avg_type,
                                            num_classes=self.out_channels)
+        # self.train_eloc = SulciErrorLocal(ignore_index=[0])
+        # self.train_esubj = SulciErrorSubject(ignore_index=[0])
+
         self.val_dsc = torchmetrics.Dice(ignore_index=0,
                                          average=avg_type,
                                          num_classes=self.out_channels)
-        self.test_dsc = torchmetrics.Dice(ignore_index=0,
-                                          average=avg_type,
-                                          num_classes=self.out_channels)
+        # self.val_eloc = SulciErrorLocal(ignore_index=[0])
+        # self.val_esubj = SulciErrorSubject(ignore_index=[0])
 
+        # self.test_dsc = torchmetrics.Dice(ignore_index=0,
+                                        #   average=avg_type,
+                                        #   num_classes=self.out_channels)
+        # self.test_eloc = SulciErrorLocal(ignore_index=[0])
+        # self.test_esubj = SulciErrorSubject(ignore_index=[0])
         self.val_dsc_best = MaxMetric()
 
         # for averaging loss across batches
@@ -94,6 +103,18 @@ class BasicUNet3D(pl.LightningModule):
                  on_step=True,  on_epoch=True,
                  prog_bar=True, logger=True,
                  batch_size=batch_size)
+
+        # self.train_eloc(input, target)
+        # self.log('train/Eloc', self.train_eloc,
+        #          on_epoch=True, prog_bar=False,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
+
+        # self.train_esubj(input, target)
+        # self.log('train/Esubj', self.train_esubj,
+        #          on_epoch=True, prog_bar=False,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -112,6 +133,17 @@ class BasicUNet3D(pl.LightningModule):
                  prog_bar=True, logger=True,
                  batch_size=batch_size)
 
+        # self.val_eloc(input, target)
+        # self.log('val/Eloc', self.val_eloc,
+        #          on_epoch=True, prog_bar=False,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
+
+        # self.val_esubj(input, target)
+        # self.log('val/Esubj', self.val_esubj,
+        #          on_epoch=True, prog_bar=True,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
         return loss
 
     def validation_epoch_end(self, outputs: list):
@@ -138,6 +170,17 @@ class BasicUNet3D(pl.LightningModule):
         self.log("test/dsc", self.test_dsc, on_step=False,
                  on_epoch=True, prog_bar=True, batch_size=batch_size)
 
+        # self.test_eloc(input, target)
+        # self.log('test/Eloc', self.test_eloc,
+        #          on_epoch=True, prog_bar=False,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
+
+        # self.test_esubj(input, target)
+        # self.log('test/Esubj', self.test_esubj,
+        #          on_epoch=True, prog_bar=False,
+        #          on_step=True, logger=True,
+        #          batch_size=batch_size)
         return loss
 
     def configure_optimizers(self):
