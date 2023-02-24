@@ -6,9 +6,10 @@ import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning.core import LightningDataModule
+from monai.transforms import SpatialPad
 import os
 from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
-                             bvisa_right_sulci_labels, bvisa_sulci_names)
+                             bvisa_right_sulci_labels, bvisa_padding_dims)
 from src.utils.general import crop_image_to_content, resample_volume
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,8 @@ class CS_Dataset(Dataset):
                  target: str,
                  dataset_path: str,
                  resample=None,
-                 crop2content: bool = False):
+                 crop2content: bool = False,
+                 padd2same_size: bool = False):
         """Constructor for CS_Dataset class
 
         Args:
@@ -47,6 +49,7 @@ class CS_Dataset(Dataset):
             resample (list[x, y, z] | None, optional): Resample the images to a given resolution.
 
             crop2content (bool, optional): Crop the images to the content of the image.
+            padd2same_size (bool, optional): Pad the images to the same size depending on image type.
         """
 
         # save dataset hyperparameters
@@ -57,6 +60,7 @@ class CS_Dataset(Dataset):
         self.dataset_path = Path(dataset_path)
         self.resample = list(resample) if resample is not None else None
         self.crop2content = crop2content
+        self.padd2same_size = padd2same_size
 
         # load corresponding image and target paths
         self.img_paths = []
@@ -145,6 +149,9 @@ class CS_Dataset(Dataset):
         # pre-process images
         image, target = self._preprocess(image, target)
 
+        # post-process images
+        image, target = self._postprocess(image, target)
+
         # get caseid
         caseid = self.img_paths[idx][0].parent.parent.parent.name
 
@@ -193,9 +200,20 @@ class CS_Dataset(Dataset):
         # min-max normalization of the image
         image = (image - image.min()) / (image.max() - image.min())
 
-        # add channel dimension to the image
-        image = np.expand_dims(image, axis=0)
         return torch.Tensor(image), torch.tensor(target, dtype=torch.long)
+
+    def _postprocess(self, image: torch.Tensor, target: torch.Tensor):
+        # padd if needed
+        if self.padd2same_size:
+            size_key = 'original' if self.resample is None else str(self.resample)
+            pad_dims = bvisa_padding_dims[self.input][size_key]
+            padd = SpatialPad(pad_dims, mode='constant', value=0)
+            image = padd(torch.unsqueeze(image, dim=0))[0]
+            target = padd(torch.unsqueeze(target, dim=0))[0]
+
+        # add channel dimension to the image
+        image = torch.unsqueeze(image, 0)
+        return image, target
 
 
 class CS_DataModule(LightningDataModule):

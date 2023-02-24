@@ -92,4 +92,16 @@ bvisa_sulci_names = ['F.C.L.a.', 'F.C.L.p.', 'F.C.L.r.ant.', 'F.C.L.r.asc',
                      'S.R.sup.', 'S.Rh.', 'S.T.i.ant.', 'S.T.i.post.', 'S.T.pol.',
                      'S.T.s.', 'S.T.s.ter.asc.ant.', 'S.T.s.ter.asc.post.',
                      'S.intraCing.', 'S.p.C.', 'S.s.P.']
+
+bvisa_padding_dims = {'skull_stripped': {'original': (160, 224, 192),
+                                         '(2, 2, 2)': (96, 96, 96)},
+
+                      'left_skeleton': {'original': (160, 224, 96),
+                                        '(2, 2, 2)': (96, 96, 64)},
+
+                      'right_skeleton': {'original': (160, 224, 96),
+                                         '(2, 2, 2)': (96, 96, 64)},
+
+                      'sulci_skeletons': {'original': (160, 224, 192),
+                                          '(2, 2, 2)': (96, 96, 96)}}
 #######################

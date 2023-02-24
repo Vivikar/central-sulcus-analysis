@@ -10,6 +10,7 @@ dataset_cfg:
     - 2 
     - 2  
   crop2content: True # wether to crop the image to the content
+  padd2same_size: True # wether to pad the image to the same size
 
 train_batch_size: 1
 validation_batch_size: 1
