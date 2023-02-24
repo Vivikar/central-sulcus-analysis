@@ -2,8 +2,8 @@ _target_: src.data.bvisa_dm.CS_DataModule
 
 dataset_cfg:
   dataset: bvisa
-  input: left_skeleton # sulci_skeletons / left_skeleton / right_skeleton / skull_stripped
-  target: left_sulci # all_sulci_bin/  left_sulci / right_sulci / central_sulcus
+  input: skull_stripped # sulci_skeletons / left_skeleton / right_skeleton / skull_stripped
+  target: central_sulcus # all_sulci_bin/  left_sulci / right_sulci / central_sulcus
   dataset_path: ${paths.data_dir}/brainvisa
   resample: # if None no resampling
     - 2

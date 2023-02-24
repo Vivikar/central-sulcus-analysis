@@ -54,9 +54,9 @@ class BasicUNet3D(pl.LightningModule):
         self.val_dsc_best.reset()
 
     def _on_step(self, batch, batch_idx):
-        x = batch['image'] # (batch_size, 1, 128, 128, 128)
-        y = batch['target'] # (batch_size, 128, 128, 128)
-        y_hat = self.net(x) # (batch_size, num_classes, 128, 128, 128)
+        x = batch['image']  # (batch_size, 1, 128, 128, 128)
+        y = batch['target']  # (batch_size, 128, 128, 128)
+        y_hat = self.net(x)  # (batch_size, num_classes, 128, 128, 128)
 
         return y, y_hat, len(y)
 
@@ -74,7 +74,7 @@ class BasicUNet3D(pl.LightningModule):
             return self.criterion(input, torch.unsqueeze(target, dim=1))
 
         elif isinstance(self.criterion, monai.losses.MaskedDiceLoss):
-            
+
             return self.criterion(input,
                                   torch.unsqueeze(target, dim=1),
                                   mask=input)
