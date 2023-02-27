@@ -1,7 +1,7 @@
 _target_: src.models.UNet3D.BasicUNet3D
 
 lr: 0.01 # CHANGE HERE
-out_channels: 2 # CHANGE HERE
+out_channels: 65 # CHANGE HERE
 
 optimizer:
   _target_: torch.optim.Adam
@@ -12,13 +12,13 @@ scheduler:
   _partial_: true
   mode: min
   factor: 0.1
-  patience: 10
+  patience: 5
 
 net:
   _target_: monai.networks.nets.BasicUNet
   spatial_dims: 3
   in_channels: 1
-  out_channels: 2 # CHANGE HERE
+  out_channels: 65 # CHANGE HERE 65 for sulci
   features:
     - 32
     - 32

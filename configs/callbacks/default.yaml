@@ -3,11 +3,12 @@ defaults:
   # - early_stopping.yaml
   # - model_summary.yaml
   - rich_progress_bar.yaml
+  - device_stats.yaml
   - _self_
 
 model_checkpoint:
   dirpath: ${paths.output_dir}/checkpoints
-  filename: "epoch-{epoch:03d}_dice-{val/dsc:.3f}"
+  filename: "epoch-{epoch:03d}-Esubj-{val/Esubj:.4f}"
   monitor: "val/dsc"
   mode: "max"
   save_top_k: 3
