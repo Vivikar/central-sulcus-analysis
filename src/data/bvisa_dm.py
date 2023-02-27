@@ -58,7 +58,7 @@ class CS_Dataset(Dataset):
         self.dataset = dataset
         self.split = split
         self.dataset_path = Path(dataset_path)
-        self.resample = tuple(resample) if resample is not None else None
+        self.resample = list(resample) if resample is not None else None
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
 
@@ -204,6 +204,7 @@ class CS_Dataset(Dataset):
 
     def _postprocess(self, image: torch.Tensor, target: torch.Tensor):
         # padd if needed
+        # TODO: FIX THE ERROR WITH THE ACTIVE PADDING
         if self.padd2same_size:
             size_key = 'original' if self.resample is None else str(self.resample)
             pad_dims = bvisa_padding_dims[self.input][size_key]
