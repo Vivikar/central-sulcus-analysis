@@ -6,13 +6,15 @@ import SimpleITK as sitk
 import torch
 from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning.core import LightningDataModule
-from monai.transforms import SpatialPad
+from monai.transforms import SpatialPad, Rotate # TODO: application of them causes mistakes
+from torchvision.transforms import RandomRotation
 import os
 from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
                              bvisa_right_sulci_labels, bvisa_padding_dims)
 from src.utils.general import crop_image_to_content, resample_volume
 
 logger = logging.getLogger(__name__)
+torch.set_float32_matmul_precision('medium')
 
 
 class CS_Dataset(Dataset):
@@ -22,7 +24,9 @@ class CS_Dataset(Dataset):
                  input: str,
                  target: str,
                  dataset_path: str,
-                 resample=None,
+                 transforms=None,
+                 preload: bool = True,
+                 resample: list[float] | None = None,
                  crop2content: bool = False,
                  padd2same_size: bool = False):
         """Constructor for CS_Dataset class
@@ -46,8 +50,9 @@ class CS_Dataset(Dataset):
             dataset_path (str | None, optional): Path to the dataset folder with the
                 directories of subjects in BrainVisa format. Defaults to None.
 
+            transforms (list[callable] | None, optional): List of transforms to apply to the images.
+            preload (bool, optional): Preload the images into RAM memory. Defaults to True.
             resample (list[x, y, z] | None, optional): Resample the images to a given resolution.
-
             crop2content (bool, optional): Crop the images to the content of the image.
             padd2same_size (bool, optional): Pad the images to the same size depending on image type.
         """
@@ -59,12 +64,15 @@ class CS_Dataset(Dataset):
         self.split = split
         self.dataset_path = Path(dataset_path)
         self.resample = list(resample) if resample is not None else None
+        self.preload = preload
+        self.transforms = transforms
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
 
         # load corresponding image and target paths
         self.img_paths = []
         self.target_paths = []
+        self.caseids = []
 
         if self.dataset == 'bvisa':
             self._load_bvisa()
@@ -90,7 +98,7 @@ class CS_Dataset(Dataset):
 
                 if self.input == 'skull_stripped':
                     image_paths.append(subj/f't1mri/t1/{subj.name}.nii.gz')
-
+                self.caseids.append(image_paths[0].parent.parent.parent.name)
                 self.img_paths.append(image_paths)
 
                 # get image target paths
@@ -107,12 +115,16 @@ class CS_Dataset(Dataset):
 
                 self.target_paths.append(target_paths)
 
-    def __len__(self):
-        return len(self.img_paths)
+        # if need to preload store sitk images instead of paths
+        if self.preload:
+            for i in range(len(self.img_paths)):
+                img, trg = self._load_image_target(i)
+                self.img_paths[i] = img
+                self.target_paths[i] = trg
 
-    def __getitem__(self, idx):
-        image, target = None, None
-
+    def _load_image_target(self, idx):
+        # TODO: Fix preloading of the data lag
+        """Load image and target from paths"""
         # load target image
         if self.input == 'left_skeleton' or self.input == 'right_skeleton':
             image = sitk.ReadImage(str(self.img_paths[idx][0]))
@@ -145,6 +157,16 @@ class CS_Dataset(Dataset):
             ltarget = sitk.ReadImage(str(self.target_paths[idx][0])) == 48
             rtarget = sitk.ReadImage(str(self.target_paths[idx][1])) == 70
             target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
+        return image, target
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        if self.preload:
+            image, target = self.img_paths[idx], self.target_paths[idx]
+        else:
+            image, target = self._load_image_target(idx)
 
         # pre-process images
         image, target = self._preprocess(image, target)
@@ -152,10 +174,23 @@ class CS_Dataset(Dataset):
         # post-process images
         image, target = self._postprocess(image, target)
 
-        # get caseid
-        caseid = self.img_paths[idx][0].parent.parent.parent.name
 
-        return {'image': image, 'target': target, 'caseid': caseid}
+        # apply transforms
+        if self.transforms == 'rotate':
+            angles = np.zeros(3)  # in radians
+            angles[np.random.randint(0, 3)] = np.random.normal(0, np.pi/16)
+            rotate = Rotate(angles, keep_size=True,
+                            padding_mode='zeros',
+                            mode='nearest')
+            image = rotate(image).type(torch.float32)  # channels first
+            target = rotate(torch.unsqueeze(target, 0))[0].type(torch.int64)
+
+        sample = {'image': image, 'target': target}
+
+        # get caseid
+        sample['caseid'] = self.caseids[idx]
+
+        return sample
 
     def _preprocess(self, image, target):
         """Converts from sitk.Image to torch.Tensor and

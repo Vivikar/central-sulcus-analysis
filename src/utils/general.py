@@ -56,8 +56,8 @@ def resample_volume(volume: sitk.Image,
 
 
 def crop_image_to_content(image: np.ndarray,
-                          min_coords: None|tuple = None,
-                          max_coords: None|tuple = None):
+                          min_coords: None | tuple = None,
+                          max_coords: None | tuple = None):
     """ Crops image to content (non-zero voxels) 
     Args:
         image (np.ndarray): Image to crop
