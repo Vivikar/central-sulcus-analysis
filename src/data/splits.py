@@ -105,3 +105,8 @@ bvisa_padding_dims = {'skull_stripped': {'original': (160, 224, 192),
                       'sulci_skeletons': {'original': (160, 224, 192),
                                           '[2, 2, 2]': (96, 96, 96)}}
 #######################
+
+synthseg_sst_splits = {'val': ['training_seg_02',
+                               'training_seg_05',
+                               'training_seg_11',
+                               'training_seg_17']}

@@ -3,13 +3,13 @@ _target_: pytorch_lightning.Trainer
 default_root_dir: ${paths.output_dir}
 
 min_epochs: 1 # prevents early stopping
-max_epochs: 100 # CHENGE HERE AND IN SST_SIMCLR.YAML
+max_epochs: 500 # CHENGE HERE AND IN SST_SIMCLR.YAML
 profiler: simple
 accelerator: gpu
 devices: 1
-log_every_n_steps: 5
+log_every_n_steps: 1
 # mixed precision for extra speed-up
-# precision: 16
+precision: 16
 
 # perform a validation loop every N training epochs
 check_val_every_n_epoch: 1

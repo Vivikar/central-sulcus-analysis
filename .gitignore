@@ -130,6 +130,7 @@ dmypy.json
 
 data/brainvisa
 data/synthseg
+data/synthseg_2x2x2
 .vscode
 
 logs/
