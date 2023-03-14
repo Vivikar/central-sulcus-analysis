@@ -8,12 +8,15 @@ import numpy as np
 import SimpleITK as sitk
 import torch.utils.data as data
 from pytorch_lightning import LightningDataModule
-from monai.transforms import Affine
 
 from src.utils.general import resample_volume
 from src.data.splits import synthseg_sst_splits
 
 logger = logging.getLogger(__name__)
+import pyrootutils
+
+
+pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 # path to synstheg generated images and label maps folders
 sytnthseg_orig_path = Path(os.environ['SYNTHSEG_PATH'])
@@ -48,7 +51,7 @@ class ContrastiveDataSet(data.Dataset):
         self.resample = list(resample) if resample is not None else None
         self.split = split
         self.use_2x2x2_preproc = use_2x2x2_preproc
-        self.transfrom = Affine(scale_params=(1.5, 1.5, 1.5))
+
         if dataset == 'synthseg':
             self._load_synthseg()
         else:
@@ -99,8 +102,8 @@ class ContrastiveDataSet(data.Dataset):
 
         # squeeze the channel dimension
         images = [i.unsqueeze(0) for i in images]
-        # transformed = self.transfrom(images[0])[0].as_tensor()
-        # images[1] = transformed
+        
+        images = [images[0], images[0]]
         return images
 
     def _skull_strip(self, images, image_paths):
@@ -165,3 +168,30 @@ class ContrastiveDataModule(LightningDataModule):
             num_workers=self.num_workers,
             drop_last=False,
             pin_memory=True)
+
+
+if __name__ == '__main__':
+    dm = ContrastiveDataModule({'dataset': 'synthseg',
+                                          'nviews':2, 'skull_strip':0.5,
+                                          'resample':[2, 2, 2]},2,2,1)
+
+    dl = data.DataLoader(
+                dm.train_dataset,
+                batch_size=3,
+                shuffle=True,
+                num_workers=1,
+                drop_last=True,
+                pin_memory=True)
+
+    ds = dm.train_dataset
+
+    training_dl = iter(dl)
+
+    for i in range(1):
+        imgs_batch, _ = next(training_dl)
+    print(imgs_batch[0].shape, imgs_batch[1].shape)
+    print(imgs_batch[0].min(), imgs_batch[0].max())
+    print(imgs_batch[1].min(), imgs_batch[1].max())
+    print(imgs_batch[0][0].mean(), imgs_batch[0][0].std())
+    print(imgs_batch[1][0].mean(), imgs_batch[1][0].std())
+    print(torch.all(imgs_batch[0][0] == imgs_batch[1][0]))

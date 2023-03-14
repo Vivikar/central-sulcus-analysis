@@ -60,8 +60,12 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
 
     # log.info('Finding best learning rate...')
-    # trainer.tune(model=model, datamodule=datamodule)
-
+    # lr_finder = trainer.tuner.lr_find(model=model, datamodule=datamodule)
+    # # update hparams of the model
+    # new_lr = lr_finder.suggestion()
+    # model.hparams.learning_rate = new_lr
+    # print(f"New learning rate: {new_lr}")
+    
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
