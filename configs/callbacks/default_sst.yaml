@@ -6,15 +6,15 @@ defaults:
 
 model_checkpoint:
   dirpath: ${paths.output_dir}/checkpoints
-  filename: "epoch-{epoch:03d}_valacc_top5-{val_acc_top1:.3f}"
-  monitor: "val_acc_top1"
-  mode: "max"
+  filename: "epoch-{epoch:03d}_val_loss-{val_loss:.3f}"
+  monitor: "val_loss"
+  mode: "min"
   save_top_k: 3
   save_last: True
   auto_insert_metric_name: False
 
 early_stopping:
-  monitor: "val_acc_top1"
+  monitor: "val_loss"
   patience: 100
   mode: "max"
 
