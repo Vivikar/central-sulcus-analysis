@@ -24,9 +24,9 @@ class ContrastiveDataSet(data.Dataset):
     def __init__(self,
                  dataset: str,
                  split: str,
-                 nviews:int = 2,
+                 nviews: int = 2,
                  use_2x2x2_preproc: bool = True,
-                 skull_strip: bool | float = True,
+                 skull_strip: bool | float | str = True,
                  resample: list[float] | None = None,
                  ):
         """ContrastiveDataSet
@@ -36,7 +36,7 @@ class ContrastiveDataSet(data.Dataset):
                 Available datasets: 'synthseg'.
             nviews (int, optional): How many agumented images of the same labelmap tp load . Defaults to 2.
             split (srt): Train or validation split.
-            skull_strip (bool|float, optional): Whether to load skull-stripped images or not. 
+            skull_strip (bool|float|str, optional): Whether to load skull-stripped images or not. 
                 If a float given, removes the skull with a given probability.
                 Defaults to True (always removes the skull & face).
             resample (list[x, y, z] | None, optional): Resample the images to a given resolution.
@@ -89,8 +89,13 @@ class ContrastiveDataSet(data.Dataset):
 
         # skull strip
         if self.skull_strip:
-            images = self._skull_strip(images, views_paths)
-
+            if not isinstance(self.skull_strip, str):
+                images = self._skull_strip(images, views_paths)
+            elif self.skull_strip == 'half':
+                # remove skull from half of the images per each pair
+                skull_stripped_imgs = self._skull_strip(images, views_paths)
+                half_len = len(images)//2
+                images = images[:half_len] + skull_stripped_imgs[half_len:]
         # min-max normalization
         images = [(i - i.min())/(i.max() - i.min()) for i in images]
 

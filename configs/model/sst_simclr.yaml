@@ -1,16 +1,11 @@
 _target_: src.models.simclr.SimCLR
 max_epochs: 500 # CHANGED HERE AND IN TRAINER/DEFAULT.YAML
 hidden_dim: 128
-lr: 0.001 # CHANGE HERE
+lr: 0.0001 # CHANGE HERE
 temperature: 0.07
 weight_decay: 1e-4
 img_dim: 128
 # dice_weight: 0.5
-
-optimizer:
-  _target_: torch.optim.Adam
-  _partial_: true
-  lr: 0.001 # CHANGE HERE
 
 scheduler:
   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
