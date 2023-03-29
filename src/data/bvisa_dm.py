@@ -211,7 +211,7 @@ class CS_Dataset(Dataset):
             image = resample_volume(image, self.resample, image_interpolator)
             target = resample_volume(target, self.resample,
                                      interpolator=sitk.sitkNearestNeighbor)
-        # convert to numpy and crop
+        # convert to numpy
         image = sitk.GetArrayFromImage(image)
         target = sitk.GetArrayFromImage(target)
 

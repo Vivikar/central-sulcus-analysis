@@ -1,0 +1,14 @@
+_target_: src.data.self_supervised_dm.ContrastiveDataModule
+
+dataset_cfg:
+  dataset: synthseg
+  nviews: 2
+  skull_strip: 'half' # half
+  resample: null # if None no resampling
+  # - 2
+  # - 2 
+  # - 2  
+  use_2x2x2_preproc: True
+train_batch_size: 8
+validation_batch_size: 4
+num_workers: 10

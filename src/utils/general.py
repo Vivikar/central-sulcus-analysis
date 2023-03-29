@@ -80,3 +80,39 @@ def crop_image_to_content(image: np.ndarray,
     return (image[x_min:x_max, y_min:y_max, z_min:z_max],
             (x_min, y_min, z_min),
             (x_max, y_max, z_max))
+
+
+def sitk_cropp_padd_img_to_size(img: sitk.Image, size=(256, 256, 124), padding_value=0):
+    """Pads or crops the image to the given size
+
+    Args:
+        img (sitk.Image): Image to crop
+        size (tuple, optional): Size of the output image in sitk convention.
+            Could be the output of img.GetSize(). Defaults to (256, 256, 124).
+        padding_value (int, optional): Value to use for padding. Defaults to 0.
+
+    Returns:
+        sitk.Image: Center padded/cropped image to given dimensions
+    """
+    padding_filter = sitk.ConstantPadImageFilter()
+    cropping_filter = sitk.CropImageFilter()
+    for dim in range(len(img.GetSize())):
+        size_origin = [0, 0, 0]
+        size_end = [0, 0, 0]
+        padding_size = size[dim] - img.GetSize()[dim]
+
+        # padd image
+        if padding_size > 0:
+            padding_size = abs(padding_size)
+            size_origin[dim] = padding_size//2
+            size_end[dim] = padding_size - size_origin[dim]
+            # padd image from the left
+            img = padding_filter.Execute(img, size_origin, size_end, padding_value)
+
+        # crop the image
+        elif padding_size < 0:
+            padding_size = abs(padding_size)
+            size_origin[dim] = padding_size//2
+            size_end[dim] = padding_size - size_origin[dim]
+            img = cropping_filter.Execute(img, size_origin, size_end)
+    return img
