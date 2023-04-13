@@ -1,11 +1,10 @@
-import torch
-import torchmetrics
-import torch.nn as nn
-import torch.optim as optim
 import pytorch_lightning as pl
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 from monai.networks.nets.resnet import resnet18
-from monai.losses import DiceLoss
+
 from src.models.unet3d.model_encoders import UNet3D
 
 
@@ -19,9 +18,8 @@ class SimCLR(pl.LightningModule):
                  temperature: float,
                  weight_decay: float,
                  encoder: UNet3D,
-                 optimizer: torch.optim.Optimizer,
                  scheduler: torch.optim.lr_scheduler,
-                 dice_weight: float = 0.5,
+                 alpha: float = 0.7
                  ):
         """_summary_
 
@@ -31,73 +29,61 @@ class SimCLR(pl.LightningModule):
             lr (float): _description_
             img_dim (int): _description_
             temperature (float): _description_
-            dice_weight (float): Weight of the dice term in the loss function.
-                Between 0 and 1. Default: 0.5.
             weight_decay (float): _description_
             encoder (UNet3D): _description_
-            optimizer (torch.optim.Optimizer): _description_
             scheduler (torch.optim.lr_scheduler): _description_
+            alpha: float: Contrastive loss weight
         """
         super().__init__()
-        self.save_hyperparameters(ignore=['net', 'encoder'])
-
-        self.dice_weight = dice_weight
-        self.learning_rate = lr
+        self.hidden_dim = hidden_dim
+        self.alpha = alpha
+        self.unet = encoder
+        self.save_hyperparameters()
 
         assert self.hparams.temperature > 0.0, 'The temperature must be a positive float!'
 
         # extract information about last layer embedding dimension
-        number_of_layers = len(encoder.f_maps)
-        last_layer_kernels = encoder.f_maps[-1]
+        # number_of_layers = len(self.encoder.f_maps)
+        # last_layer_kernels = self.encoder.f_maps[-1]
 
         # calculate u-net embeding dimension after max pooling
-        embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
-
-        self.unet = encoder
+        # embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
+        embed_dim = 458752    # TODO:  Hardcoded for now FOR BVISA DATA RETRAINING
+        print(f'U-Net Embedding dimension: {embed_dim}')
+        self.learning_rate = lr
 
         # The MLP for g(.) consists of Linear->ReLU->Linear
         self.mlp_head = nn.Sequential(nn.MaxPool3d(kernel_size=2, stride=2),
                                       nn.Flatten(),
-                                      nn.Linear(embed_dim, embed_dim),
+                                      nn.Linear(embed_dim, self.hidden_dim),
                                       nn.ReLU(inplace=False),
-                                      nn.Linear(embed_dim, hidden_dim))
+                                      nn.Linear(self.hidden_dim, self.hidden_dim)
+                                    )
 
-        # define the loss functions for segmentation and contrastive learning
-        self.contrastive_loss = torch.nn.CrossEntropyLoss()
-
-        self.dice_loss = DiceLoss(to_onehot_y=True, softmax=True,
-                                  include_background=False)
-
-        self.val_dsc = torchmetrics.Dice(ignore_index=0,
-                                         average='macro',
-                                         num_classes=3,
-                                         multiclass=True)
-        self.train_dsc = torchmetrics.Dice(ignore_index=0,
-                                           average='macro',
-                                           num_classes=3,
-                                           multiclass=True)
+        self.criterion = torch.nn.CrossEntropyLoss()
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        optimizer = optim.Adam(self.parameters(),
+                               lr=self.learning_rate)
         return optimizer
 
+    def forward(self, x):
+        segm_out, unet_embed = self.unet(x)
+        embed = self.mlp_head(unet_embed)
+        return segm_out, embed
+
     def info_nce_loss(self, batch, mode='train'):
-
-        # NEW UN-BATCHING WITH LABELS
-        img1, img2, lab1, lab2 = batch
-        pred_segm, bottle_neck_features = self.unet(torch.concat([img1, img2]))
-        embeddings = self.mlp_head(bottle_neck_features)
-        ########### InfoNCE Loss ###########
-
+        imgs, _ = batch
+        imgs = torch.cat(imgs, dim=0)
         # Encode all images
-        # features = self.mlp_head(imgs)
+        segm_out, features = self.forward(imgs)
 
-        labels = torch.cat([torch.arange(batch[-1].shape[0], device=embeddings.device) for i in range(2)], dim=0)
+        labels = torch.cat([torch.arange(batch[-1].shape[0], device=features.device) for i in range(2)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
-        embeddings = F.normalize(embeddings, dim=1)
+        features = F.normalize(features, dim=1)
 
-        similarity_matrix = torch.matmul(embeddings, embeddings.T)
+        similarity_matrix = torch.matmul(features, features.T)
 
         # discard the main diagonal from both: labels and similarities matrix
         mask = torch.eye(labels.shape[0], dtype=torch.bool, device=similarity_matrix.device)
@@ -115,43 +101,25 @@ class SimCLR(pl.LightningModule):
         labels = torch.zeros(logits.shape[0], dtype=torch.long, device=logits.device)
         logits = logits / self.hparams.temperature
 
-        contrastive_loss = self.contrastive_loss(logits, labels)
-
-
-        ### DICE Loss ###
-        # pred_segm = self.unet(torch.concat([img1, img2]))
-
-        dice_loss = self.dice_loss(pred_segm, torch.concat([lab1, lab2]))
-
-        final_loss = (1-self.dice_weight)*contrastive_loss + self.dice_weight*dice_loss
+        contrastive_loss = self.criterion(logits, labels)
 
         # Logging loss
-        self.log(mode+'_final_loss', final_loss, prog_bar=True)
-        self.log(mode+'_dice_loss', dice_loss, prog_bar=True)
-        self.log(mode+'_contrastive_loss', contrastive_loss, prog_bar=True)
-        
-        top1, top5 = self.accuracy(logits, labels, topk=(1, 5))
-        # # Get ranking position of positive example
+        self.log(mode+'_loss', contrastive_loss, prog_bar=True,
+                 on_step=False, on_epoch=True)
+        top1, top5 = self.accuracy(logits, labels, topk=(1, 2))
 
-        # Logging ranking metrics
+        # # Logging ranking metrics
         self.log(mode+'_acc_top1', top1[0],
-                 prog_bar=True)
+                 prog_bar=True, on_step=False, on_epoch=True)
         self.log(mode+'_acc_top5', top5[0],
-                 prog_bar=True)
+                 prog_bar=True, on_step=False, on_epoch=True)
 
-        if mode == 'val':
-            self.val_dsc(pred_segm,
-                         torch.concat([lab1.squeeze(dim=1),
-                                       lab2.squeeze(dim=1)]).type(torch.long))
-            self.log(mode+'_dice', self.val_dsc.compute(), prog_bar=True,
-                     on_step=True, on_epoch=True, batch_size=8, logger=True)
-        elif mode == 'train':
-            self.train_dsc(pred_segm,
-                           torch.concat([lab1.squeeze(dim=1),
-                                         lab2.squeeze(dim=1)]).type(torch.long))
-            self.log(mode+'_dice', self.train_dsc.compute(), prog_bar=True,
-                     on_step=True, on_epoch=True, batch_size=16, logger=True)
-        return final_loss
+        
+        # Segmentation loss
+        segment_loss = 0
+        
+        loss = (1-self.alpha)*segment_loss + self.alpha*contrastive_loss
+        return loss
 
     @staticmethod
     def accuracy(output, target, topk=(1,)):

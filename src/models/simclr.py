@@ -33,26 +33,30 @@ class SimCLR(pl.LightningModule):
             scheduler (torch.optim.lr_scheduler): _description_
         """
         super().__init__()
-        self.save_hyperparameters(ignore=['encoder'])
+        self.hidden_dim = hidden_dim
+
+        self.encoder = encoder
+        self.save_hyperparameters()
 
         assert self.hparams.temperature > 0.0, 'The temperature must be a positive float!'
 
         # extract information about last layer embedding dimension
-        number_of_layers = len(encoder.f_maps)
-        last_layer_kernels = encoder.f_maps[-1]
+        # number_of_layers = len(self.encoder.f_maps)
+        # last_layer_kernels = self.encoder.f_maps[-1]
 
         # calculate u-net embeding dimension after max pooling
-        embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
-
+        # embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
+        embed_dim = 49152 # 49152 #64000 for synthseg  # # TODO:  Hardcoded for now FOR BVISA DATA RETRAINING
+        print(f'U-Net Embedding dimension: {embed_dim}')
         self.learning_rate = lr
 
         # The MLP for g(.) consists of Linear->ReLU->Linear
-        self.mlp_head = nn.Sequential(encoder,
-                                      nn.MaxPool3d(kernel_size=2, stride=2),
+        self.mlp_head = nn.Sequential(nn.MaxPool3d(kernel_size=2, stride=2),
                                       nn.Flatten(),
-                                      nn.Linear(embed_dim, embed_dim),
+                                      nn.Linear(embed_dim, self.hidden_dim),
                                       nn.ReLU(inplace=False),
-                                      nn.Linear(embed_dim, 256))
+                                      nn.Linear(self.hidden_dim, self.hidden_dim)
+                                    )
 
         self.criterion = torch.nn.CrossEntropyLoss()
 
@@ -62,14 +66,16 @@ class SimCLR(pl.LightningModule):
         return optimizer
 
     def forward(self, x):
-        return self.mlp_head(x)
+        embed = self.encoder(x)
+        
+        return self.mlp_head(embed)
 
     def info_nce_loss(self, batch, mode='train'):
         imgs, _ = batch
         imgs = torch.cat(imgs, dim=0)
         # Encode all images
-        features = self.mlp_head(imgs)
-
+        features = self.forward(imgs)
+        
         labels = torch.cat([torch.arange(batch[-1].shape[0], device=features.device) for i in range(2)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
@@ -96,14 +102,15 @@ class SimCLR(pl.LightningModule):
         loss = self.criterion(logits, labels)
 
         # Logging loss
-        self.log(mode+'_loss', loss, prog_bar=True)
-        top1, top5 = self.accuracy(logits, labels, topk=(1, 5))
+        self.log(mode+'_loss', loss, prog_bar=True,
+                 on_step=False, on_epoch=True)
+        top1, top5 = self.accuracy(logits, labels, topk=(1, 1))
 
         # # Logging ranking metrics
         self.log(mode+'_acc_top1', top1[0],
-                 prog_bar=True)
+                 prog_bar=True, on_step=False, on_epoch=True)
         self.log(mode+'_acc_top5', top5[0],
-                 prog_bar=True)
+                 prog_bar=True, on_step=False, on_epoch=True)
 
         return loss
 

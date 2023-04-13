@@ -4,26 +4,60 @@ import torch
 import torchmetrics
 from monai.networks.nets import BasicUNet
 from torchmetrics import MaxMetric, MeanMetric
-
+from src.models.simclr import SimCLR
+from src.models.unet3d.model import UNet3D
 from src.utils.metrics.error_rate import SulciErrorLocal, SulciErrorSubject
+from src.models.monai_impl import BasicUNetEncoder
 
 class BasicUNet3D(pl.LightningModule):
     def __init__(
             self,
             lr: float,
-            net: BasicUNet,
+            net: UNet3D,
+            out_channels: int,
+            freeze_encoder: bool,
+            monai: bool,
+            loss_function,
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler,
-            out_channels: int,
-            loss_function):
+            encoder_chkp: str | None = None,
+            ):
 
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(ignore=['net', 'loss_function'])
-
+        self.loss_function= loss_function
         self.net = net
+        self.encoder_chkp = encoder_chkp
+        self.monai = monai
+        self.freeze_encoder = freeze_encoder
+        # pre-load weights
+        if self.encoder_chkp is not None:
+            print('Loading encoder weights from checkpoint...')
+            print(self.encoder_chkp)
+            simclr = SimCLR.load_from_checkpoint(self.encoder_chkp,
+                                                 strict=True)
+            if not monai:
+                # load pretrained silclr encoder from the custom UNET
+                # replace the encoder with the pretrained one
+                self.net.encoders = simclr.mlp_head[0].encoders
+            else:
+                self.net.conv_0 = simclr.encoder.conv_0
+                self.net.down_1 = simclr.encoder.down_1
+                self.net.down_2 = simclr.encoder.down_2
+                self.net.down_3 = simclr.encoder.down_3
+                self.net.down_4 = simclr.encoder.down_4
+            # TODO: Implelent loading of downCONV part
+        if self.freeze_encoder:
+            print('Freezing encoder...')
+            i = 0
+            for child in self.net.children():
+                if i > 4:
+                    break
+                i+=1
+                for param in child.parameters():
+                    param.requires_grad = False
 
         # loss function
         self.criterion = loss_function
@@ -53,10 +87,13 @@ class BasicUNet3D(pl.LightningModule):
 
         # for averaging loss across batches
         self.test_loss = MeanMetric()
+        self.save_hyperparameters()
 
     def forward(self, x):
-        return self.net(x)
-
+        if not self.monai:
+            return self.net.forward(x)
+        else:
+            return self.net(x)
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
         # so we need to make sure val_acc_best doesn't store accuracy from these checks
@@ -65,8 +102,11 @@ class BasicUNet3D(pl.LightningModule):
     def _on_step(self, batch, batch_idx):
         x = batch['image']  # (batch_size, 1, 128, 128, 128)
         y = batch['target']  # (batch_size, 128, 128, 128)
-        y_hat = self.net(x)  # (batch_size, num_classes, 128, 128, 128)
-
+        if not self.monai:
+            y_hat = self.net.forward(x)  # (batch_size, num_classes, 128, 128, 128)
+        else:
+            y_hat = self.net(x)  # (batch_size, num_classes, 128, 128, 128)
+        
         return y, y_hat, len(y)
 
     def _get_loss(self, input, target):
@@ -76,7 +116,10 @@ class BasicUNet3D(pl.LightningModule):
             # target shape: (batch_size, 128, 128, 128)
             return self.criterion(input, target)
 
-        elif isinstance(self.criterion, monai.losses.DiceLoss):
+        elif isinstance(self.criterion, monai.losses.DiceLoss) or\
+             isinstance(self.criterion, monai.losses.DiceCELoss) or\
+             isinstance(self.criterion, monai.losses.FocalLoss) or\
+             isinstance(self.criterion, monai.losses.TverskyLoss):
             # for dice loss
             # input shape: (batch_size, num_classes, 128, 128, 128)
             # target shape: (batch_size, 1 or num_classes, 128, 128, 128)
@@ -87,6 +130,8 @@ class BasicUNet3D(pl.LightningModule):
             return self.criterion(input,
                                   torch.unsqueeze(target, dim=1),
                                   mask=input)
+        else:
+            raise ValueError("Loss function not supported")
 
     def training_step(self, batch, batch_idx):
 
@@ -119,9 +164,9 @@ class BasicUNet3D(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
 
-        target, input, batch_size = self._on_step(batch, batch_idx)
+        target, input, batch_size = self._on_step(batch[0], batch_idx)
 
-        loss = loss = self._get_loss(input, target)
+        loss = self._get_loss(input, target)
 
         self.log("val/loss", loss, on_step=False,
                  on_epoch=True, prog_bar=True,
@@ -144,6 +189,9 @@ class BasicUNet3D(pl.LightningModule):
                  on_epoch=True, prog_bar=True,
                  on_step=True, logger=True,
                  batch_size=batch_size)
+        if batch[1]:
+            self.test_step(batch[1], batch_idx)
+
         return loss
 
     def validation_epoch_end(self, outputs: list):
@@ -156,6 +204,7 @@ class BasicUNet3D(pl.LightningModule):
         # log `val_dsc_best` as a value through `.compute()` method, instead
         # of as a metric object otherwise metric would be reset by lightning after each epoch
         self.log("val/dsc_best", self.val_dsc_best.compute(), prog_bar=True)
+
 
     def test_step(self, batch, batch_idx: int):
         target, input, batch_size = self._on_step(batch, batch_idx)
@@ -181,7 +230,8 @@ class BasicUNet3D(pl.LightningModule):
                  on_epoch=True, prog_bar=False,
                  on_step=True, logger=True,
                  batch_size=batch_size)
-        return loss
+
+        # return loss
 
     def configure_optimizers(self):
         optimizer = self.hparams.optimizer(params=self.parameters(), lr=self.learning_rate)

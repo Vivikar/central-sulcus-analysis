@@ -3,7 +3,7 @@ _target_: pytorch_lightning.Trainer
 default_root_dir: ${paths.output_dir}
 
 min_epochs: 1 # prevents early stopping
-max_epochs: 100 # CHENGE HERE AND IN SST_SIMCLR.YAML
+max_epochs: 300 # CHENGE HERE AND IN SST_SIMCLR.YAML
 profiler: simple
 accelerator: gpu
 devices: 1
