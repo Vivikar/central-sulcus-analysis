@@ -3,6 +3,7 @@ import monai
 import torch
 import torchmetrics
 from monai.networks.nets import BasicUNet
+from kornia.losses import HausdorffERLoss3D
 from torchmetrics import MaxMetric, MeanMetric
 from src.models.simclr import SimCLR
 from src.models.unet3d.model import UNet3D
@@ -21,6 +22,7 @@ class BasicUNet3D(pl.LightningModule):
             optimizer: torch.optim.Optimizer,
             scheduler: torch.optim.lr_scheduler,
             encoder_chkp: str | None = None,
+            extra_loss: str | None = None,
             ):
 
         super().__init__()
@@ -32,6 +34,7 @@ class BasicUNet3D(pl.LightningModule):
         self.encoder_chkp = encoder_chkp
         self.monai = monai
         self.freeze_encoder = freeze_encoder
+        self.extra_loss = extra_loss
         # pre-load weights
         if self.encoder_chkp is not None:
             print('Loading encoder weights from checkpoint...')
@@ -87,6 +90,10 @@ class BasicUNet3D(pl.LightningModule):
 
         # for averaging loss across batches
         self.test_loss = MeanMetric()
+
+        if self.extra_loss == 'hausdorff':
+            self.hausdorff = HausdorffERLoss3D()
+
         self.save_hyperparameters()
 
     def forward(self, x):
@@ -110,11 +117,13 @@ class BasicUNet3D(pl.LightningModule):
         return y, y_hat, len(y)
 
     def _get_loss(self, input, target):
+        
+        segm_loss = None
         if isinstance(self.criterion, torch.nn.CrossEntropyLoss):
             # for cross entropy loss 
             # input shape: (batch_size, num_classes, 128, 128, 128)
             # target shape: (batch_size, 128, 128, 128)
-            return self.criterion(input, target)
+            segm_loss =  self.criterion(input, target)
 
         elif isinstance(self.criterion, monai.losses.DiceLoss) or\
              isinstance(self.criterion, monai.losses.DiceCELoss) or\
@@ -123,15 +132,22 @@ class BasicUNet3D(pl.LightningModule):
             # for dice loss
             # input shape: (batch_size, num_classes, 128, 128, 128)
             # target shape: (batch_size, 1 or num_classes, 128, 128, 128)
-            return self.criterion(input, torch.unsqueeze(target, dim=1))
+            segm_loss =  self.criterion(input, torch.unsqueeze(target, dim=1))
 
         elif isinstance(self.criterion, monai.losses.MaskedDiceLoss):
 
-            return self.criterion(input,
+            segm_loss =  self.criterion(input,
                                   torch.unsqueeze(target, dim=1),
                                   mask=input)
         else:
             raise ValueError("Loss function not supported")
+
+        if self.extra_loss == 'hausdorff':
+            hd_loss = self.hausdorff(input, torch.unsqueeze(target, dim=1))
+            total_loss = segm_loss + hd_loss
+        elif self.extra_loss is None:
+            total_loss = segm_loss
+        return total_loss
 
     def training_step(self, batch, batch_idx):
 

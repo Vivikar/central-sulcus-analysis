@@ -12,7 +12,7 @@ import os
 from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
                              bvisa_right_sulci_labels, bvisa_padding_dims)
 from src.data.bvisa_dm import CS_Dataset as CS_Dataset_NoAugm
-
+from scipy.ndimage import distance_transform_bf
 from src.utils.general import crop_image_to_content, resample_volume, sitk_cropp_padd_img_to_size
 logger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision('medium')
@@ -196,6 +196,10 @@ class CS_Dataset(Dataset):
                 new_target[target == orig_label] = new_label + 1
             target = new_target
 
+        # apply distance transform
+        if self.regresssion == 'distance-transform':
+            target = self.dist_transf(target)
+
         # crop to content
         if self.crop2content:
             image, min_coords, max_coords = crop_image_to_content(image)
@@ -219,10 +223,16 @@ class CS_Dataset(Dataset):
 
         # add channel dimension to the image
         image = torch.unsqueeze(image, 0)
+        
+        
         return image, target
-
+    
     @staticmethod
-    def remove_btissue_labels(img: np.array):
+    def dist_transf(target: np.ndarray):
+        return target
+    
+    @staticmethod
+    def remove_btissue_labels(img: np.ndarray):
         # remove background tissue labels
         mask1000 = (img>=1000) & (img<2000)
         img[mask1000] = img[mask1000] - 1000

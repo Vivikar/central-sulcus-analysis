@@ -1,13 +1,13 @@
 _target_: src.data.self_supervised_dm.ContrastiveDataModule
 
 dataset_cfg:
-  dataset: brainvisa
+  dataset: synthseg
   nviews: 2
-  skull_strip: null #'half' # half
-  resample: null # if None no resampling
-  # - 1.5
-  # - 1.5 
-  # - 1.5  
+  skull_strip: half #'half' # half
+  resample: # if None no resampling
+  - 1.5
+  - 1.5 
+  - 1.5  
   use_2x2x2_preproc: False
 train_batch_size: 3
 validation_batch_size: 3

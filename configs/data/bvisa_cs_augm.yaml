@@ -11,6 +11,7 @@ dataset_cfg:
     # - 2  
   crop2content: False # wether to crop the image to the content
   padd2same_size: 256-256-124 # wether to pad the image to the same size
+  regresssion: null #'distance-transform'
 train_batch_size: 1
 validation_batch_size: 1
 num_workers: 0

@@ -51,7 +51,8 @@ class SimCLR(pl.LightningModule):
         self.learning_rate = lr
 
         # The MLP for g(.) consists of Linear->ReLU->Linear
-        self.mlp_head = nn.Sequential(nn.MaxPool3d(kernel_size=2, stride=2),
+        self.mlp_head = nn.Sequential(
+                                      nn.MaxPool3d(kernel_size=2, stride=2),
                                       nn.Flatten(),
                                       nn.Linear(embed_dim, self.hidden_dim),
                                       nn.ReLU(inplace=False),

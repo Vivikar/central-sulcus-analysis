@@ -138,6 +138,9 @@ class ContrastiveDataSet(data.Dataset):
         # load labels
         lable_paths = [str(x).replace('image', 'labels') for x in image_paths]
         labels = [sitk.ReadImage(p) for p in lable_paths]
+        if self.dataset == 'synthseg':
+            # reorient images
+            labels = [sitk.DICOMOrient(i, 'LAS') for i in labels]
         labels = [self._preporces_sitk(img, labelmap=True) for img in labels]
         labels = [sitk.GetArrayFromImage(img) for img in labels]
 

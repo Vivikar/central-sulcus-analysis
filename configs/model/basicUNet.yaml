@@ -3,6 +3,8 @@ _target_: src.models.UNet3D.BasicUNet3D
 lr: 0.0005 # CHANGE HERE
 out_channels: 2 # CHANGE HERE
 
+extra_loss: hausdorff # hausdorff # CHANGE HERE
+
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
@@ -15,7 +17,7 @@ scheduler:
   patience: 5
 monai: True
 freeze_encoder: False
-encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/sst_logs/bvisa-monai-BasicUnet-1x-half/runs/2023-04-11_20-24-07/checkpoints/epoch-348_val_loss-0.016.ckpt
+encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/bvisa-monai-BasicUnet-1x-half/runs/2023-04-11_20-24-07/checkpoints/epoch-348_val_loss-0.016.ckpt
 # net:
 #   _target_: src.models.unet3d.model.UNet3D
 #   in_channels: 1
@@ -40,10 +42,10 @@ net:
     - 128
     - 256
     - 32
-
 # loss_function:
 #   _target_: torch.nn.CrossEntropyLoss
 #   # ignore_index: 0
+
 
 loss_function:
   _target_: monai.losses.TverskyLoss
