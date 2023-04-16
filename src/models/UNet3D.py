@@ -40,7 +40,7 @@ class BasicUNet3D(pl.LightningModule):
             print('Loading encoder weights from checkpoint...')
             print(self.encoder_chkp)
             simclr = SimCLR.load_from_checkpoint(self.encoder_chkp,
-                                                 strict=True)
+                                                 strict=False)
             if not monai:
                 # load pretrained silclr encoder from the custom UNET
                 # replace the encoder with the pretrained one
@@ -101,6 +101,7 @@ class BasicUNet3D(pl.LightningModule):
             return self.net.forward(x)
         else:
             return self.net(x)
+
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
         # so we need to make sure val_acc_best doesn't store accuracy from these checks
@@ -113,11 +114,11 @@ class BasicUNet3D(pl.LightningModule):
             y_hat = self.net.forward(x)  # (batch_size, num_classes, 128, 128, 128)
         else:
             y_hat = self.net(x)  # (batch_size, num_classes, 128, 128, 128)
-        
+
         return y, y_hat, len(y)
 
-    def _get_loss(self, input, target):
-        
+    def _get_loss(self, input, target, step=None):
+
         segm_loss = None
         if isinstance(self.criterion, torch.nn.CrossEntropyLoss):
             # for cross entropy loss 
@@ -144,6 +145,10 @@ class BasicUNet3D(pl.LightningModule):
 
         if self.extra_loss == 'hausdorff':
             hd_loss = self.hausdorff(input, torch.unsqueeze(target, dim=1))
+            if step == 'val':
+                self.log("train/loss", hd_loss, on_step=False,
+                 on_epoch=True, prog_bar=True,
+                 logger=True, batch_size=1)
             total_loss = segm_loss + hd_loss
         elif self.extra_loss is None:
             total_loss = segm_loss
@@ -182,7 +187,7 @@ class BasicUNet3D(pl.LightningModule):
 
         target, input, batch_size = self._on_step(batch[0], batch_idx)
 
-        loss = self._get_loss(input, target)
+        loss = self._get_loss(input, target, 'val')
 
         self.log("val/loss", loss, on_step=False,
                  on_epoch=True, prog_bar=True,

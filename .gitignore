@@ -155,3 +155,6 @@ finetuning_logs/
 logs_sst/
 logs_finetuning/
 sulci_segm_logs/
+finetuning_logs/
+sst_logs/
+sulci_segm_logs/
