@@ -1,5 +1,6 @@
 import numpy as np
 import SimpleITK as sitk
+from scipy.ndimage import distance_transform_edt
 
 FreeSurferColorLUT = 'utils/FreeSurferColorLUT.txt'
 def fs_lut(lut_path:str=FreeSurferColorLUT):
@@ -82,7 +83,7 @@ def crop_image_to_content(image: np.ndarray,
             (x_max, y_max, z_max))
 
 
-def sitk_cropp_padd_img_to_size(img: sitk.Image, size=(256, 256, 124), padding_value=0):
+def sitk_cropp_padd_img_to_size(img: sitk.Image, size, padding_value=0):
     """Pads or crops the image to the given size
 
     Args:
@@ -107,12 +108,47 @@ def sitk_cropp_padd_img_to_size(img: sitk.Image, size=(256, 256, 124), padding_v
             size_origin[dim] = padding_size//2
             size_end[dim] = padding_size - size_origin[dim]
             # padd image from the left
-            img = padding_filter.Execute(img, size_origin, size_end, padding_value)
+            padding_filter.SetPadLowerBound(size_origin)
+            padding_filter.SetPadUpperBound(size_end)
+            padding_filter.SetConstant(padding_value)
+            img = padding_filter.Execute(img)
 
         # crop the image
         elif padding_size < 0:
             padding_size = abs(padding_size)
             size_origin[dim] = padding_size//2
             size_end[dim] = padding_size - size_origin[dim]
-            img = cropping_filter.Execute(img, size_origin, size_end)
+            cropping_filter.SetLowerBoundaryCropSize(size_origin)
+            cropping_filter.SetUpperBoundaryCropSize(size_end)
+            
+            img = cropping_filter.Execute(img)
     return img
+
+
+
+def gaussian_distance_map(binary_mask:np.ndarray,
+                          alpha=2,
+                          xi=5):
+    """Transform a binary mask into a distance map using a exponential function.
+        Implementation of the method described in:
+        Marasinou et.al. "Segmentation of Breast Microcalcifications:
+        a Multi-Scale Approach", doi: https://arxiv.org/pdf/2102.00754.pdf
+
+    Args:
+        binary_mask (np.ndarray): Binary mask to transform.
+        alpha (int, optional): Smoothing parameter. Lower values more smoothing.
+            Defaults to 2.
+        xi (int, optional): Threshold parameter. Higher values
+            means bigger trace of the smoothed mask. Defaults to 10.
+
+    Returns:
+        Smoothed distance map: Probability dustribution of the
+            foreground mask pixels with values [0, 1].
+    """
+    # Compute the distance map of the binary mask
+    distance_map = distance_transform_edt(np.logical_not(binary_mask))
+    smoothed_distance_map = (np.exp(alpha * (1 - distance_map / xi)) - 1)/(np.exp(alpha) - 1)
+    smoothed_distance_map[distance_map > xi] = 0
+    
+    # Return the inverted distance map
+    return smoothed_distance_map

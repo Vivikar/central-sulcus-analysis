@@ -11,7 +11,7 @@ from pytorch_lightning import LightningDataModule
 from monai.transforms import Affine
 
 from src.utils.general import resample_volume
-from src.data.splits import synthseg_sst_splits
+from src.data.splits import synthseg_sst_splits, bvisa_splits
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,8 @@ class ContrastiveDataSet(data.Dataset):
         self.transfrom = Affine(scale_params=(1.5, 1.5, 1.5))
         if dataset == 'synthseg':
             self._load_synthseg()
+        elif dataset == 'brainvisa':
+            self._load_brainvisa()
         else:
             raise ValueError(f'Unknown dataset: {dataset}')
 
@@ -66,6 +68,19 @@ class ContrastiveDataSet(data.Dataset):
 
     def __len__(self):
         return len(self.img_dirs)
+
+    def _load_brainvisa(self):
+        if self.use_2x2x2_preproc:
+            bvisa_path = Path(os.environ['BRAIN_VISA_AUGM_PATH_2x'])
+        else:
+            bvisa_path = Path(os.environ['BRAIN_VISA_AUGM_PATH'])
+
+        self.img_dirs = [x for x in bvisa_path.iterdir() if x.is_dir()]
+
+        if self.split == 'train':
+            self.img_dirs = [x for x in self.img_dirs if x.name not in bvisa_splits['validation'] + bvisa_splits['test']]
+        elif self.split == 'val':
+            self.img_dirs = [x for x in self.img_dirs if x.name in bvisa_splits['validation']]
 
     def _load_synthseg(self):
         if self.use_2x2x2_preproc:
@@ -84,6 +99,11 @@ class ContrastiveDataSet(data.Dataset):
 
         # load and convert to numpy
         images = [sitk.ReadImage(str(p)) for p in views_paths]
+
+        if self.dataset == 'synthseg':
+            # reorient images
+            images = [sitk.DICOMOrient(i, 'LAS') for i in images]
+
         images = [self._preporces_sitk(img) for img in images]
         images = [sitk.GetArrayFromImage(img) for img in images]
 
@@ -91,7 +111,7 @@ class ContrastiveDataSet(data.Dataset):
         if self.skull_strip:
             if not isinstance(self.skull_strip, str):
                 images = self._skull_strip(images, views_paths)
-            elif self.skull_strip == 'half':
+            elif self.skull_strip == 'half' and self.dataset != 'brainvisa':
                 # remove skull from half of the images per each pair
                 skull_stripped_imgs = self._skull_strip(images, views_paths)
                 half_len = len(images)//2
@@ -118,6 +138,9 @@ class ContrastiveDataSet(data.Dataset):
         # load labels
         lable_paths = [str(x).replace('image', 'labels') for x in image_paths]
         labels = [sitk.ReadImage(p) for p in lable_paths]
+        if self.dataset == 'synthseg':
+            # reorient images
+            labels = [sitk.DICOMOrient(i, 'LAS') for i in labels]
         labels = [self._preporces_sitk(img, labelmap=True) for img in labels]
         labels = [sitk.GetArrayFromImage(img) for img in labels]
 

@@ -68,7 +68,7 @@ class CS_Dataset(Dataset):
         self.transforms = transforms
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
-
+        
         # load corresponding image and target paths
         self.img_paths = []
         self.target_paths = []
@@ -157,6 +157,9 @@ class CS_Dataset(Dataset):
             ltarget = sitk.ReadImage(str(self.target_paths[idx][0])) == 48
             rtarget = sitk.ReadImage(str(self.target_paths[idx][1])) == 70
             target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
+
+        # image = sitk.DICOMOrient(image, 'RIP')
+        # target = sitk.DICOMOrient(target, 'RIP')
         return image, target
 
     def __len__(self):
