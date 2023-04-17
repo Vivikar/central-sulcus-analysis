@@ -20,10 +20,10 @@ torch.set_float32_matmul_precision('medium')
 class CS_Dataset(Dataset):
     def __init__(self,
                  dataset: str,
-                 split: str,
                  input: str,
                  target: str,
                  dataset_path: str,
+                 split: str | None = None,
                  transforms=None,
                  preload: bool = True,
                  resample: list[float] | None = None,
@@ -68,7 +68,7 @@ class CS_Dataset(Dataset):
         self.transforms = transforms
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
-        
+
         # load corresponding image and target paths
         self.img_paths = []
         self.target_paths = []
@@ -76,44 +76,21 @@ class CS_Dataset(Dataset):
 
         if self.dataset == 'bvisa':
             self._load_bvisa()
+        elif self.dataset == 'via11':
+            self._load_via11()
         else:
             raise ValueError(f'Dataset: {dataset} not Implemented')
 
-    def _load_bvisa(self):
-        sulci_path = os.environ.get('SULCI_PATH_PREFIX')
-        skeleton_path = os.environ.get('SKELETON_PATH_PREFIX')
+    def _load_via11(self):
+        """Load VIA11 dataset"""
+        drcmr_path = Path(os.environ.get('VIA11_DRCMR'))
+        cfin_path = Path(os.environ.get('VIA11_CFIN'))
 
-        for subj in self.dataset_path.iterdir():
-            if subj.is_dir() and subj.name in bvisa_splits[self.split]:
+        cfin_subjs = [subj for subj in cfin_path.iterdir() if subj.is_dir()]
+        drcmr_subjs = [subj for subj in drcmr_path.iterdir() if subj.is_dir()]
 
-                # get image input paths
-                image_paths = []
-                if self.input == 'sulci_skeletons' or self.input == 'left_skeleton':
-                    lsulci = subj/f'{skeleton_path}/Lskeleton_{subj.name}.nii.gz'
-                    image_paths.append(lsulci)
-
-                if self.input == 'sulci_skeletons' or self.input == 'right_skeleton':
-                    rsulci = subj/f'{skeleton_path}/Rskeleton_{subj.name}.nii.gz'
-                    image_paths.append(rsulci)
-
-                if self.input == 'skull_stripped':
-                    image_paths.append(subj/f't1mri/t1/{subj.name}.nii.gz')
-                self.caseids.append(image_paths[0].parent.parent.parent.name)
-                self.img_paths.append(image_paths)
-
-                # get image target paths
-                target_paths = []
-                if self.target == 'left_sulci' or self.target == 'all_sulci_bin' \
-                        or self.target == 'central_sulcus':
-                    lsulci = subj/f'{sulci_path}/LSulci_{subj.name}_base2018_manual.nii.gz'
-                    target_paths.append(lsulci)
-
-                if self.target == 'right_sulci' or self.target == 'all_sulci_bin' \
-                        or self.target == 'central_sulcus':
-                    rsulci = subj/f'{sulci_path}/RSulci_{subj.name}_base2018_manual.nii.gz'
-                    target_paths.append(rsulci)
-
-                self.target_paths.append(target_paths)
+        for subj in cfin_subjs + drcmr_subjs:
+            self.__load_subject_via11(subj)
 
         # if need to preload store sitk images instead of paths
         if self.preload:
@@ -121,6 +98,74 @@ class CS_Dataset(Dataset):
                 img, trg = self._load_image_target(i)
                 self.img_paths[i] = img
                 self.target_paths[i] = trg
+
+    def _load_bvisa(self):
+        for subj in self.dataset_path.iterdir():
+            if subj.is_dir() and subj.name in bvisa_splits[self.split]:
+
+                self.__load_subject_bvisa(subj)
+
+        # if need to preload store sitk images instead of paths
+        if self.preload:
+            for i in range(len(self.img_paths)):
+                img, trg = self._load_image_target(i)
+                self.img_paths[i] = img
+                self.target_paths[i] = trg
+
+    def __load_subject_via11(self, subj):
+        sulci_path = os.environ.get('SEGM_PATH')
+
+        # get image input paths
+        image_paths = []
+        if self.input == 'mp2rage_raw':
+            image_paths.append(subj/f't1mri/default_acquisition/{subj.name}.nii.gz')
+        else:
+            raise ValueError(f'Input: {self.input} not Implemented')
+        subj_id = image_paths[0].parent.parent.parent.name
+        self.caseids.append(subj_id)
+        self.img_paths.append(image_paths)
+
+        # get image target paths
+        target_paths = []
+        if self.target == 'bvisa_CS':
+            target_paths.append(subj/f'{sulci_path}/LSulci_{subj_id}_default_session_best.nii.gz')
+            target_paths.append(subj/f'{sulci_path}/RSulci_{subj_id}_default_session_best.nii.gz')
+        else:
+            raise ValueError(f'Target: {self.target} not Implemented')
+        self.target_paths.append(target_paths)
+
+    def __load_subject_bvisa(self, subj):
+        sulci_path = os.environ.get('SULCI_PATH_PREFIX')
+        skeleton_path = os.environ.get('SKELETON_PATH_PREFIX')
+
+        # get image input paths
+        image_paths = []
+        if self.input == 'sulci_skeletons' or self.input == 'left_skeleton':
+            lsulci = subj/f'{skeleton_path}/Lskeleton_{subj.name}.nii.gz'
+            image_paths.append(lsulci)
+
+        if self.input == 'sulci_skeletons' or self.input == 'right_skeleton':
+            rsulci = subj/f'{skeleton_path}/Rskeleton_{subj.name}.nii.gz'
+            image_paths.append(rsulci)
+
+        if self.input == 'skull_stripped':
+            image_paths.append(subj/f't1mri/t1/{subj.name}.nii.gz')
+        self.caseids.append(image_paths[0].parent.parent.parent.name)
+        self.img_paths.append(image_paths)
+
+        # get image target paths
+        target_paths = []
+        if self.target == 'left_sulci' or self.target == 'all_sulci_bin' \
+                or self.target == 'central_sulcus':
+            lsulci = subj/f'{sulci_path}/LSulci_{subj.name}_base2018_manual.nii.gz'
+            target_paths.append(lsulci)
+
+        if self.target == 'right_sulci' or self.target == 'all_sulci_bin' \
+                or self.target == 'central_sulcus':
+            rsulci = subj/f'{sulci_path}/RSulci_{subj.name}_base2018_manual.nii.gz'
+            target_paths.append(rsulci)
+
+        self.target_paths.append(target_paths)
 
     def _load_image_target(self, idx):
         # TODO: Fix preloading of the data lag
@@ -141,6 +186,12 @@ class CS_Dataset(Dataset):
 
         elif self.input == 'skull_stripped':
             image = sitk.ReadImage(str(self.img_paths[idx][0]))
+        elif self.input == 'mp2rage_raw':
+            image = sitk.ReadImage(str(self.img_paths[idx][0]))
+            # reorient to RAS to have similar orientation as BVISA images
+            image = sitk.DICOMOrient(image, 'RAS')
+        # orig_target = sitk.DICOMOrient(orig_target, 'RIP') 
+
         else:
             raise ValueError(f'Input: {self.input} not implemented')
 
@@ -157,6 +208,12 @@ class CS_Dataset(Dataset):
             ltarget = sitk.ReadImage(str(self.target_paths[idx][0])) == 48
             rtarget = sitk.ReadImage(str(self.target_paths[idx][1])) == 70
             target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
+        elif self.target == 'bvisa_CS':
+            ltarget = sitk.ReadImage(str(self.target_paths[idx][0]))
+            rtarget = sitk.ReadImage(str(self.target_paths[idx][1]))
+            target = sitk.Cast((ltarget + rtarget) > 0, sitk.sitkInt16)
+            # reorient to RAS to have similar orientation as BVISA images
+            target = sitk.DICOMOrient(target, 'RAS')
 
         # image = sitk.DICOMOrient(image, 'RIP')
         # target = sitk.DICOMOrient(target, 'RIP')
@@ -176,7 +233,6 @@ class CS_Dataset(Dataset):
 
         # post-process images
         image, target = self._postprocess(image, target)
-
 
         # apply transforms
         if self.transforms == 'rotate':
