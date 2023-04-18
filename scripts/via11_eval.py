@@ -72,7 +72,10 @@ for i in tqdm(range(len(via11DS))):
     # re-orient to PSR (original VIA orientation)
     segm_pred_sitk = sitk.DICOMOrient(segm_pred_sitk, 'ASL')
     orig_img = sitk.ReadImage(str(via11DS.img_paths[i][0]))
-    segm_pred_sitk.CopyInformation(orig_img)
 
+    try:
+        segm_pred_sitk.CopyInformation(orig_img)
+    except RuntimeError as e:
+        print(f'Error: {e} at {caseid}')
     sitk.WriteImage(segm_pred_sitk, str(res_path/f'{caseid}.nii.gz'))
     # break

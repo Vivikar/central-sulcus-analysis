@@ -110,3 +110,9 @@ synthseg_sst_splits = {'val': ['training_seg_02',
                                'training_seg_05',
                                'training_seg_11',
                                'training_seg_17']}
+
+bad_via11 = ['sub-via419', # missing folds data [CFIN]
+             'sub-via510', # missing folds data [CFIN]
+             'sub-via244', # missing folds data [DRCMR]
+             'sub-via286', # missing folds data [DRCMR]
+             ]

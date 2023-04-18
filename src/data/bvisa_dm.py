@@ -10,8 +10,10 @@ from monai.transforms import SpatialPad, Rotate # TODO: application of them caus
 from torchvision.transforms import RandomRotation
 import os
 from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
-                             bvisa_right_sulci_labels, bvisa_padding_dims)
+                             bvisa_right_sulci_labels, bvisa_padding_dims,
+                             bad_via11)
 from src.utils.general import crop_image_to_content, resample_volume
+from src.utils.general import sitk_cropp_padd_img_to_size
 
 logger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision('medium')
@@ -28,7 +30,7 @@ class CS_Dataset(Dataset):
                  preload: bool = True,
                  resample: list[float] | None = None,
                  crop2content: bool = False,
-                 padd2same_size: bool = False):
+                 padd2same_size: str = None):
         """Constructor for CS_Dataset class
 
         Args:
@@ -54,7 +56,7 @@ class CS_Dataset(Dataset):
             preload (bool, optional): Preload the images into RAM memory. Defaults to True.
             resample (list[x, y, z] | None, optional): Resample the images to a given resolution.
             crop2content (bool, optional): Crop the images to the content of the image.
-            padd2same_size (bool, optional): Pad the images to the same size depending on image type.
+            padd2same_size (string, optional): Pad-cropps the images to the same size depending on image type.
         """
 
         # save dataset hyperparameters
@@ -68,7 +70,8 @@ class CS_Dataset(Dataset):
         self.transforms = transforms
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
-
+        if self.padd2same_size:
+            self.cropPadd_size = [int(x) for x in padd2same_size.split('-')]
         # load corresponding image and target paths
         self.img_paths = []
         self.target_paths = []
@@ -90,6 +93,8 @@ class CS_Dataset(Dataset):
         drcmr_subjs = [subj for subj in drcmr_path.iterdir() if subj.is_dir()]
 
         for subj in cfin_subjs + drcmr_subjs:
+            if subj.name in bad_via11:
+                continue
             self.__load_subject_via11(subj)
 
         # if need to preload store sitk images instead of paths
@@ -270,6 +275,11 @@ class CS_Dataset(Dataset):
             image = resample_volume(image, self.resample, image_interpolator)
             target = resample_volume(target, self.resample,
                                      interpolator=sitk.sitkNearestNeighbor)
+        if self.padd2same_size:
+            # cropp-padding if needed
+            image = sitk_cropp_padd_img_to_size(image, self.cropPadd_size)
+            target = sitk_cropp_padd_img_to_size(target, self.cropPadd_size)
+
         # convert to numpy
         image = sitk.GetArrayFromImage(image)
         target = sitk.GetArrayFromImage(target)
@@ -299,12 +309,13 @@ class CS_Dataset(Dataset):
     def _postprocess(self, image: torch.Tensor, target: torch.Tensor):
         # padd if needed
         # TODO: FIX THE ERROR WITH THE ACTIVE PADDING
-        if self.padd2same_size:
-            size_key = 'original' if self.resample is None else str(self.resample)
-            pad_dims = bvisa_padding_dims[self.input][size_key]
-            padd = SpatialPad(pad_dims, mode='constant', value=0)
-            image = padd(torch.unsqueeze(image, dim=0))[0]
-            target = padd(torch.unsqueeze(target, dim=0))[0]
+        # if self.padd2same_size:
+        #     raise ValueError('Should not be used anymore')
+        #     size_key = 'original' if self.resample is None else str(self.resample)
+        #     pad_dims = bvisa_padding_dims[self.input][size_key]
+        #     padd = SpatialPad(pad_dims, mode='constant', value=0)
+        #     image = padd(torch.unsqueeze(image, dim=0))[0]
+        #     target = padd(torch.unsqueeze(target, dim=0))[0]
 
         # add channel dimension to the image
         image = torch.unsqueeze(image, 0)
