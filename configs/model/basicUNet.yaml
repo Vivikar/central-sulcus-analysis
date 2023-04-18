@@ -1,9 +1,10 @@
-_target_: src.models.UNet3D.BasicUNet3D
+# _target_: src.models.UNet3D.BasicUNet3D
+_target_: src.models.UNet3DRegression.RegrUNet3D
 
 lr: 0.0005 # CHANGE HERE
-out_channels: 2 # CHANGE HERE
+out_channels: 1 # CHANGE HERE
 
-extra_loss: hausdorff # hausdorff # CHANGE HERE
+extra_loss: null # hausdorff # CHANGE HERE
 
 optimizer:
   _target_: torch.optim.Adam
@@ -17,7 +18,7 @@ scheduler:
   patience: 5
 monai: True
 freeze_encoder: False
-encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/bvisa-monai-BasicUnet-1x-half/runs/2023-04-11_20-24-07/checkpoints/epoch-348_val_loss-0.016.ckpt
+encoder_chkp: null #/mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/bvisa-monai-BasicUnet-1x-half/runs/2023-04-11_20-24-07/checkpoints/epoch-348_val_loss-0.016.ckpt
 # net:
 #   _target_: src.models.unet3d.model.UNet3D
 #   in_channels: 1
@@ -34,7 +35,7 @@ net:
   _target_: monai.networks.nets.basic_unet.BasicUNet
   spatial_dims: 3
   in_channels: 1
-  out_channels: 2
+  out_channels: 1
   features:
     - 16
     - 32
@@ -48,11 +49,16 @@ net:
 
 
 loss_function:
-  _target_: monai.losses.TverskyLoss
-  to_onehot_y: True # should be true of include_background is false
-  # because first channel from target_y is excluded
-  softmax: True
-  # jaccard: False
-  include_background: True
-  # lambda_dice: 1.
-  # lambda_ce: 0.
+  _target_: torch.nn.CrossEntropyLoss
+  reduction: sum
+
+
+# loss_function:
+#   _target_: monai.losses.TverskyLoss
+#   to_onehot_y: True # should be true of include_background is false
+#   # because first channel from target_y is excluded
+#   softmax: True
+#   # jaccard: False
+#   include_background: True
+#   # lambda_dice: 1.
+#   # lambda_ce: 0.

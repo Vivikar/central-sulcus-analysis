@@ -13,7 +13,7 @@ from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
                              bvisa_right_sulci_labels, bvisa_padding_dims)
 from src.data.bvisa_dm import CS_Dataset as CS_Dataset_NoAugm
 from scipy.ndimage import distance_transform_bf
-from src.utils.general import crop_image_to_content, resample_volume, sitk_cropp_padd_img_to_size
+from src.utils.general import crop_image_to_content, resample_volume, sitk_cropp_padd_img_to_size, gaussian_distance_map
 logger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision('medium')
 
@@ -60,7 +60,7 @@ class CS_Dataset(Dataset):
         self.transforms = transforms
         self.use_half_brain = use_half_brain
         self.regresssion = regresssion
-        
+
         self.crop2content = crop2content
         self.padd2same_size = padd2same_size
 
@@ -208,7 +208,10 @@ class CS_Dataset(Dataset):
         # min-max normalization of the image
         image = (image - image.min()) / (image.max() - image.min())
 
-        return torch.Tensor(image), torch.tensor(target, dtype=torch.long)
+        if self.regresssion == 'distance-transform':
+            return torch.Tensor(image), torch.tensor(target, dtype=torch.float32)
+        else:
+            return torch.Tensor(image), torch.tensor(target, dtype=torch.long)
 
     def _postprocess(self, image: torch.Tensor, target: torch.Tensor):
         # padd if needed
@@ -223,14 +226,15 @@ class CS_Dataset(Dataset):
 
         # add channel dimension to the image
         image = torch.unsqueeze(image, 0)
-        
-        
+
         return image, target
-    
+
     @staticmethod
     def dist_transf(target: np.ndarray):
-        return target
-    
+        return gaussian_distance_map(target,
+                                     alpha=2,
+                                     xi=5)
+
     @staticmethod
     def remove_btissue_labels(img: np.ndarray):
         # remove background tissue labels

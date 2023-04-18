@@ -30,8 +30,11 @@ from src.data.bvisa_dm import CS_Dataset
 
 sitk.ProcessObject_SetGlobalWarningDisplay(False)
 
+CHKP = '/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_tverskyLoss_monaBasicUnet-fullTraining/runs/2023-04-12_13-42-02/checkpoints/epoch-045-Esubj-0.4378.ckpt'
+
+
+
 out_path = '/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/segm_results'
-CHKP = '/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_synthsegSST_tverskyLoss_monaBasicUnet-freezeEncoder/runs/2023-04-13_18-08-15/checkpoints/epoch-047-Esubj-0.4962.ckpt'
 
 CHKP = Path(CHKP)
 exp_name = CHKP.parent.parent.parent.parent.name
@@ -49,7 +52,7 @@ via11DS = CS_Dataset('via11', 'mp2rage_raw',
 
 # via11DL = DataLoader(via11DS, batch_size=1, shuffle=False, num_workers=10)
 
-for i in range(len(via11DS)):
+for i in tqdm(range(len(via11DS))):
     val_sample = via11DS[i]
     img = val_sample['image']
     target = val_sample['target']
@@ -65,11 +68,11 @@ for i in range(len(via11DS)):
 
     res_path = Path(f'{out_path}/{exp_name}')
     res_path.mkdir(parents=True, exist_ok=True)
-    
+
     # re-orient to PSR (original VIA orientation)
     segm_pred_sitk = sitk.DICOMOrient(segm_pred_sitk, 'ASL')
     orig_img = sitk.ReadImage(str(via11DS.img_paths[i][0]))
     segm_pred_sitk.CopyInformation(orig_img)
 
     sitk.WriteImage(segm_pred_sitk, str(res_path/f'{caseid}.nii.gz'))
-    break
+    # break
