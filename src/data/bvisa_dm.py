@@ -124,9 +124,11 @@ class CS_Dataset(Dataset):
         image_paths = []
         if self.input == 'mp2rage_raw':
             image_paths.append(subj/f't1mri/default_acquisition/{subj.name}.nii.gz')
+        elif self.input == 'mp2rage_skull_stripped':
+            image_paths.append(subj/f't1mri/default_acquisition/default_analysis/segmentation/skull_stripped_{subj.name}.nii.gz')
         else:
             raise ValueError(f'Input: {self.input} not Implemented')
-        subj_id = image_paths[0].parent.parent.parent.name
+        subj_id = subj.name
         self.caseids.append(subj_id)
         self.img_paths.append(image_paths)
 
@@ -191,7 +193,7 @@ class CS_Dataset(Dataset):
 
         elif self.input == 'skull_stripped':
             image = sitk.ReadImage(str(self.img_paths[idx][0]))
-        elif self.input == 'mp2rage_raw':
+        elif self.input == 'mp2rage_raw' or self.input == 'mp2rage_skull_stripped':
             image = sitk.ReadImage(str(self.img_paths[idx][0]))
             # reorient to RAS to have similar orientation as BVISA images
             image = sitk.DICOMOrient(image, 'RAS')

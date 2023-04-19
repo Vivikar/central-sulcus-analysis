@@ -34,7 +34,7 @@ CHKP = '/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSS
 
 
 
-out_path = '/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/segm_results'
+out_path = '/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/segm_results/skull_stripped_images'
 
 CHKP = Path(CHKP)
 exp_name = CHKP.parent.parent.parent.parent.name
@@ -46,7 +46,7 @@ segm_model: LightningModule = hydra.utils.instantiate(segm_cfg.model)
 
 segm_model = segm_model.load_from_checkpoint(CHKP).to('cuda')
 
-via11DS = CS_Dataset('via11', 'mp2rage_raw',
+via11DS = CS_Dataset('via11', 'mp2rage_skull_stripped',
                      'bvisa_CS', dataset_path='',
                      preload=False)
 
@@ -73,9 +73,9 @@ for i in tqdm(range(len(via11DS))):
     segm_pred_sitk = sitk.DICOMOrient(segm_pred_sitk, 'ASL')
     orig_img = sitk.ReadImage(str(via11DS.img_paths[i][0]))
 
-    try:
-        segm_pred_sitk.CopyInformation(orig_img)
-    except RuntimeError as e:
-        print(f'Error: {e} at {caseid}')
+    # try:
+    #     segm_pred_sitk.CopyInformation(orig_img)
+    # except RuntimeError as e:
+    #     print(f'Error: {e} at {caseid}')
     sitk.WriteImage(segm_pred_sitk, str(res_path/f'{caseid}.nii.gz'))
-    # break
+    break
