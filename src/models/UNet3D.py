@@ -6,6 +6,7 @@ from monai.networks.nets import BasicUNet
 from kornia.losses import HausdorffERLoss3D
 from torchmetrics import MaxMetric, MeanMetric
 from src.models.simclr import SimCLR
+from src.models.simclr_segm import SimCLRSegm
 from src.models.unet3d.model import UNet3D
 from src.utils.metrics.error_rate import SulciErrorLocal, SulciErrorSubject
 from src.models.monai_impl import BasicUNetEncoder
@@ -23,6 +24,7 @@ class BasicUNet3D(pl.LightningModule):
             scheduler: torch.optim.lr_scheduler,
             encoder_chkp: str | None = None,
             extra_loss: str | None = None,
+            segm_encoder: bool = False,
             ):
 
         super().__init__()
@@ -33,24 +35,32 @@ class BasicUNet3D(pl.LightningModule):
         self.net = net
         self.encoder_chkp = encoder_chkp
         self.monai = monai
+        self.segm_encoder = segm_encoder
         self.freeze_encoder = freeze_encoder
         self.extra_loss = extra_loss
         # pre-load weights
         if self.encoder_chkp is not None:
             print('Loading encoder weights from checkpoint...')
             print(self.encoder_chkp)
-            simclr = SimCLR.load_from_checkpoint(self.encoder_chkp,
-                                                 strict=False)
+            if segm_encoder:
+                simclr = SimCLRSegm.load_from_checkpoint(self.encoder_chkp,
+                                                 strict=True)
+            else:
+                simclr = SimCLR.load_from_checkpoint(self.encoder_chkp,
+                                                 strict=True)
             if not monai:
                 # load pretrained silclr encoder from the custom UNET
                 # replace the encoder with the pretrained one
                 self.net.encoders = simclr.mlp_head[0].encoders
             else:
-                self.net.conv_0 = simclr.encoder.conv_0
-                self.net.down_1 = simclr.encoder.down_1
-                self.net.down_2 = simclr.encoder.down_2
-                self.net.down_3 = simclr.encoder.down_3
-                self.net.down_4 = simclr.encoder.down_4
+                if segm_encoder:
+                    self.net = simclr.unet
+                else:
+                    self.net.conv_0 = simclr.encoder.conv_0
+                    self.net.down_1 = simclr.encoder.down_1
+                    self.net.down_2 = simclr.encoder.down_2
+                    self.net.down_3 = simclr.encoder.down_3
+                    self.net.down_4 = simclr.encoder.down_4
             # TODO: Implelent loading of downCONV part
         if self.freeze_encoder:
             print('Freezing encoder...')
@@ -100,7 +110,10 @@ class BasicUNet3D(pl.LightningModule):
         if not self.monai:
             return self.net.forward(x)
         else:
-            return self.net(x)
+            if self.segm_encoder:
+                return self.net(x)[-1] # retrieve the segm not the embed
+            else:
+                return self.net(x)
 
     def on_train_start(self):
         # by default lightning executes validation step sanity checks before training starts,
@@ -113,8 +126,11 @@ class BasicUNet3D(pl.LightningModule):
         if not self.monai:
             y_hat = self.net.forward(x)  # (batch_size, num_classes, 128, 128, 128)
         else:
-            y_hat = self.net(x)  # (batch_size, num_classes, 128, 128, 128)
-
+            # (batch_size, num_classes, 128, 128, 128)
+            if self.segm_encoder:
+                y_hat = self.net(x)[-1] # retrieve the segm not the embed
+            else:
+                y_hat =  self.net(x)
         return y, y_hat, len(y)
 
     def _get_loss(self, input, target, step=None):

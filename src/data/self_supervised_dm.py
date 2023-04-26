@@ -12,6 +12,7 @@ from monai.transforms import Affine
 
 from src.utils.general import resample_volume
 from src.data.splits import synthseg_sst_splits, bvisa_splits, via11_splits
+from src.utils.general import sitk_cropp_padd_img_to_size, crop_image_to_content
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,8 @@ class ContrastiveDataSet(data.Dataset):
                  use_2x2x2_preproc: bool = True,
                  skull_strip: bool | float | str = True,
                  resample: list[float] | None = None,
+                 croppadd2samesize: bool | str = False,
+                 crop2content: bool = False,
                  ):
         """ContrastiveDataSet
 
@@ -44,10 +47,12 @@ class ContrastiveDataSet(data.Dataset):
         """
         self.dataset = dataset
         self.nviews = nviews
+        self.crop2content = crop2content
         self.skull_strip = skull_strip
         self.resample = list(resample) if resample is not None else None
         self.split = split
         self.use_2x2x2_preproc = use_2x2x2_preproc
+        self.croppadd2samesize = croppadd2samesize
         self.transfrom = Affine(scale_params=(1.5, 1.5, 1.5))
         if dataset == 'synthseg':
             self._load_synthseg()
@@ -67,6 +72,16 @@ class ContrastiveDataSet(data.Dataset):
         views_images = self._load_images(views_paths)
 
         return (views_images, -1)
+
+    def get_N_samples(self, index, N_samples):
+        img_path = self.img_dirs[index]
+        all_img_views = [x for x in img_path.glob('image*.nii.gz')]
+        views_paths = all_img_views[:N_samples]
+
+        views_images = self._load_images(views_paths)
+        # views_paths_targets = [str(x).replace('image', 'labels') for x in views_paths]
+        # views_targets = self._load_targets(views_paths_targets)
+        return views_images
 
     def __len__(self):
         return len(self.img_dirs)
@@ -121,18 +136,20 @@ class ContrastiveDataSet(data.Dataset):
         elif self.dataset == 'via11':
             images = [sitk.DICOMOrient(i, 'LAS') for i in images]
 
-        images = [self._preporces_sitk(img) for img in images]
+        images = [self._preporces_sitk(img, views_paths[idx]) for idx, img in enumerate(images)]
         images = [sitk.GetArrayFromImage(img) for img in images]
 
         # skull strip
         if self.skull_strip:
-            if not isinstance(self.skull_strip, str):
+            if not isinstance(self.skull_strip, str) and self.skull_strip:
                 images = self._skull_strip(images, views_paths)
             elif self.skull_strip == 'half' and self.dataset != 'brainvisa':
                 # remove skull from half of the images per each pair
                 skull_stripped_imgs = self._skull_strip(images, views_paths)
                 half_len = len(images)//2
                 images = images[:half_len] + skull_stripped_imgs[half_len:]
+                # crop to content
+
         # min-max normalization
         images = [(i - i.min())/(i.max() - i.min()) for i in images]
 
@@ -158,7 +175,8 @@ class ContrastiveDataSet(data.Dataset):
         if self.dataset == 'synthseg':
             # reorient images
             labels = [sitk.DICOMOrient(i, 'LAS') for i in labels]
-        labels = [self._preporces_sitk(img, labelmap=True) for img in labels]
+        labels = [self._preporces_sitk(img, image_paths[idx], labelmap=True) for idx, img in enumerate(labels)]
+
         labels = [sitk.GetArrayFromImage(img) for img in labels]
 
         # mask outeverything except cortex labels
@@ -166,13 +184,37 @@ class ContrastiveDataSet(data.Dataset):
         masked_images = [x*y for x, y in zip(images, cortex_mask)]
         return masked_images
 
-    def _preporces_sitk(self, img, labelmap=False):
+    def _preporces_sitk(self, img, path, labelmap=False):
         image_interpolator = sitk.sitkLinear if not labelmap else sitk.sitkNearestNeighbor
         if self.resample is not None:
             img = resample_volume(img, self.resample, image_interpolator)
-            return img
-        else:
-            return img
+
+        if self.crop2content:
+            img_array = sitk.GetArrayFromImage(img)
+
+            # load and use the mask to zero-out non-brain voxels
+            mask = sitk.ReadImage(str(path).replace('image', 'labels'))
+            if self.dataset == 'synthseg':
+                mask = sitk.DICOMOrient(mask, 'LAS')
+            elif self.dataset == 'via11':
+                mask = sitk.DICOMOrient(mask, 'LAS')
+            if self.resample:
+                mask = resample_volume(mask, self.resample, sitk.sitkNearestNeighbor)
+            mask = sitk.GetArrayFromImage(mask)
+            img_array[mask == 0] = 0
+
+            cropped_img = crop_image_to_content(img_array)[0]
+            cropped_img = sitk.GetImageFromArray(cropped_img)
+            cropped_img.SetDirection(img.GetDirection())
+            cropped_img.SetOrigin(img.GetOrigin())
+            cropped_img.SetSpacing(img.GetSpacing())
+            img = cropped_img
+
+        if self.croppadd2samesize:
+            croppadd = [int(x) for x in self.croppadd2samesize.split('-')]
+            img = sitk_cropp_padd_img_to_size(img, croppadd, 0)
+        
+        return img
 
 
 class ContrastiveDataModule(LightningDataModule):

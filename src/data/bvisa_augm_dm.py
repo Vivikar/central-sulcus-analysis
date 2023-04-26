@@ -13,6 +13,8 @@ from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
                              bvisa_right_sulci_labels, bvisa_padding_dims)
 from src.data.bvisa_dm import CS_Dataset as CS_Dataset_NoAugm
 from scipy.ndimage import distance_transform_bf
+from src.utils.general import resample_volume, sitk_cropp_padd_img_to_size
+
 from src.utils.general import crop_image_to_content, resample_volume, sitk_cropp_padd_img_to_size, gaussian_distance_map
 logger = logging.getLogger(__name__)
 torch.set_float32_matmul_precision('medium')
@@ -104,12 +106,6 @@ class CS_Dataset(Dataset):
         # image = sitk.DICOMOrient(image, 'RIP')
         # orig_target = sitk.DICOMOrient(orig_target, 'RIP') 
 
-        # padd image TODO: remove hardcoding of padding values
-        if self.padd2same_size:
-            padd_size = [int(x) for x in self.padd2same_size.split('-')]
-            image = sitk_cropp_padd_img_to_size(image, padd_size, 0)
-            orig_target = sitk_cropp_padd_img_to_size(orig_target, padd_size, 0)
-        # print('image', image.GetSize())
         # remove half of the brain
         if self.target in ['left_sulci', 'right_sulci'] and self.use_half_brain:
             image_stripped = sitk.GetArrayFromImage(image)
@@ -180,6 +176,13 @@ class CS_Dataset(Dataset):
             image = resample_volume(image, self.resample, image_interpolator)
             target = resample_volume(target, self.resample,
                                      interpolator=sitk.sitkNearestNeighbor)
+
+        # padd image TODO: remove hardcoding of padding values
+        if self.padd2same_size:
+            padd_size = [int(x) for x in self.padd2same_size.split('-')]
+            image = sitk_cropp_padd_img_to_size(image, padd_size, 0)
+            target = sitk_cropp_padd_img_to_size(target, padd_size, 0)
+
         # convert to numpy
         image = sitk.GetArrayFromImage(image)
         target = sitk.GetArrayFromImage(target)
@@ -276,16 +279,16 @@ class CS_DataModule(LightningDataModule):
         self.val_dataset = CS_Dataset(split='validation', **dataset_cfg)
 
         bvisa_orig_path = os.environ.get('BVISA_PATH')
-        resample = (2, 2, 2) if '2x' in dataset_cfg['dataset'] else None
+
         self.orig_val_dataset = CS_Dataset_NoAugm(split='validation',
                                                   dataset=dataset_cfg['dataset'],
                                                   target=dataset_cfg['target'],
                                                   input='skull_stripped',
                                                   dataset_path=bvisa_orig_path,
                                                   preload=False,
-                                                  resample=resample,
+                                                  resample=dataset_cfg['resample'],
                                                   crop2content=False,
-                                                  padd2same_size=False
+                                                  padd2same_size=dataset_cfg['padd2same_size']
                                                   )
         logger.info(f'Len of train examples {len(self.train_dataset)} ' +
                     f'len of validation examples {len(self.val_dataset)}')

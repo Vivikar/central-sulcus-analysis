@@ -57,7 +57,9 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
 
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger,
+                                               
+                                               )
 
     # log.info('Finding best learning rate...')
     # lr_finder = trainer.tuner.lr_find(model=model, datamodule=datamodule)

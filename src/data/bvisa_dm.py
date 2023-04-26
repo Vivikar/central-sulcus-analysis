@@ -11,7 +11,7 @@ from torchvision.transforms import RandomRotation
 import os
 from src.data.splits import (bvisa_splits, bvisa_left_sulci_labels,
                              bvisa_right_sulci_labels, bvisa_padding_dims,
-                             bad_via11)
+                             bad_via11, via11_qc)
 from src.utils.general import crop_image_to_content, resample_volume
 from src.utils.general import sitk_cropp_padd_img_to_size
 
@@ -92,7 +92,13 @@ class CS_Dataset(Dataset):
         cfin_subjs = [subj for subj in cfin_path.iterdir() if subj.is_dir()]
         drcmr_subjs = [subj for subj in drcmr_path.iterdir() if subj.is_dir()]
 
-        for subj in cfin_subjs + drcmr_subjs:
+
+        all_subjs = cfin_subjs + drcmr_subjs
+        if self.split == 'only_good':
+            good_via = set(via11_qc['fs_qc_passed']).intersection(set(via11_qc['bvisa_qc_passed']))
+            all_subjs = [x for x in all_subjs if x.name in good_via]
+
+        for subj in all_subjs:
             if subj.name in bad_via11:
                 continue
             self.__load_subject_via11(subj)

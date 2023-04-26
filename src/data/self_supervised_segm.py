@@ -73,6 +73,16 @@ class ContrastiveDataSet(data.Dataset):
         views_targets = self._load_targets(views_paths_targets)
         return (views_images, views_targets)
 
+    def get_N_samples(self, index, N_samples):
+        img_path = self.img_dirs[index]
+        all_img_views = [x for x in img_path.glob('image*.nii.gz')]
+        views_paths = all_img_views[:N_samples]
+
+        views_images = self._load_images(views_paths)
+        # views_paths_targets = [str(x).replace('image', 'labels') for x in views_paths]
+        # views_targets = self._load_targets(views_paths_targets)
+        return views_images
+
     def __len__(self):
         return len(self.img_dirs)
 
