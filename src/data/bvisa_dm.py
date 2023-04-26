@@ -30,7 +30,7 @@ class CS_Dataset(Dataset):
                  preload: bool = True,
                  resample: list[float] | None = None,
                  crop2content: bool = False,
-                 padd2same_size: str = None):
+                 croppadd2same_size: str = None):
         """Constructor for CS_Dataset class
 
         Args:
@@ -69,9 +69,9 @@ class CS_Dataset(Dataset):
         self.preload = preload
         self.transforms = transforms
         self.crop2content = crop2content
-        self.padd2same_size = padd2same_size
-        if self.padd2same_size:
-            self.cropPadd_size = [int(x) for x in padd2same_size.split('-')]
+        self.croppadd2same_size = croppadd2same_size
+        if self.croppadd2same_size:
+            self.cropPadd_size = [int(x) for x in croppadd2same_size.split('-')]
         # load corresponding image and target paths
         self.img_paths = []
         self.target_paths = []
@@ -283,7 +283,17 @@ class CS_Dataset(Dataset):
             image = resample_volume(image, self.resample, image_interpolator)
             target = resample_volume(target, self.resample,
                                      interpolator=sitk.sitkNearestNeighbor)
-        if self.padd2same_size:
+        
+        # crop to content
+        if self.crop2content:
+            img2crop = sitk.GetArrayFromImage(image)
+            target2crop = sitk.GetArrayFromImage(target)
+            image, min_coords, max_coords = crop_image_to_content(img2crop)
+            target, _, __ = crop_image_to_content(target2crop, min_coords, max_coords)
+            image = sitk.GetImageFromArray(image)
+            target = sitk.GetImageFromArray(target)
+
+        if self.croppadd2same_size:
             # cropp-padding if needed
             image = sitk_cropp_padd_img_to_size(image, self.cropPadd_size)
             target = sitk_cropp_padd_img_to_size(target, self.cropPadd_size)
@@ -304,10 +314,6 @@ class CS_Dataset(Dataset):
                 new_target[target == orig_label] = new_label + 1
             target = new_target
 
-        # crop to content
-        if self.crop2content:
-            image, min_coords, max_coords = crop_image_to_content(image)
-            target, _, __ = crop_image_to_content(target, min_coords, max_coords)
 
         # min-max normalization of the image
         image = (image - image.min()) / (image.max() - image.min())

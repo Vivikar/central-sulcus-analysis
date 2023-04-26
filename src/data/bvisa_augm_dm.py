@@ -288,7 +288,7 @@ class CS_DataModule(LightningDataModule):
                                                   preload=False,
                                                   resample=dataset_cfg['resample'],
                                                   crop2content=False,
-                                                  padd2same_size=dataset_cfg['padd2same_size']
+                                                  croppadd2same_size=dataset_cfg['padd2same_size']
                                                   )
         logger.info(f'Len of train examples {len(self.train_dataset)} ' +
                     f'len of validation examples {len(self.val_dataset)}')

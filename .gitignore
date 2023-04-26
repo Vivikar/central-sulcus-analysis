@@ -136,6 +136,7 @@ data/synthseg_corrected
 data/brainvisa_augm_2x2x2
 data/brainvisa_augm
 data/via11
+data/brainvisa_results
 .vscode
 
 logs/

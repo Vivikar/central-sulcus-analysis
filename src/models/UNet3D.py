@@ -200,8 +200,10 @@ class BasicUNet3D(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-
-        target, input, batch_size = self._on_step(batch[0], batch_idx)
+        if isinstance(batch, list):
+            target, input, batch_size = self._on_step(batch[0], batch_idx)
+        else:
+            target, input, batch_size = self._on_step(batch, batch_idx)
 
         loss = self._get_loss(input, target, 'val')
 
@@ -226,7 +228,7 @@ class BasicUNet3D(pl.LightningModule):
                  on_epoch=True, prog_bar=True,
                  on_step=True, logger=True,
                  batch_size=batch_size)
-        if batch[1]:
+        if isinstance(batch, list) and batch[1]:
             self.test_step(batch[1], batch_idx)
 
         return loss

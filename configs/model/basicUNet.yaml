@@ -17,10 +17,10 @@ scheduler:
   factor: 0.1
   patience: 5
 monai: True
-freeze_encoder: True
+freeze_encoder: False
 
-segm_encoder: True
-encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/bvisa-monai-BasicUnet-2x-segmentDice+contrastive/runs/2023-04-20_17-06-05/checkpoints/epoch-256_val_loss-0.141.ckpt
+segm_encoder: False
+encoder_chkp: null #/mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/bvisa-monai-BasicUnet-2x-segmentDice+contrastive/runs/2023-04-20_17-06-05/checkpoints/epoch-256_val_loss-0.141.ckpt
 
 net:
   _target_: monai.networks.nets.basic_unet.BasicUNet
