@@ -44,10 +44,10 @@ class BasicUNet3D(pl.LightningModule):
             print(self.encoder_chkp)
             if segm_encoder:
                 simclr = SimCLRSegm.load_from_checkpoint(self.encoder_chkp,
-                                                 strict=True)
+                                                 strict=False)
             else:
                 simclr = SimCLR.load_from_checkpoint(self.encoder_chkp,
-                                                 strict=True)
+                                                 strict=False)
             if not monai:
                 # load pretrained silclr encoder from the custom UNET
                 # replace the encoder with the pretrained one

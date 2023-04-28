@@ -16,7 +16,7 @@ from tqdm import tqdm
 import SimpleITK as sitk
 from multiprocessing import Pool
 
-from src.utils.general import resample_volume
+from src.utils.general import resample_volume, sitk_cropp_padd_img_to_size, crop_image_to_content
 
 # %%
 # from src.models.simclr import SimCLR as SimCLRD
@@ -24,26 +24,36 @@ from src.utils.general import resample_volume
 
 # %%
 orig_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/synth_generated')
-down_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/synth_generated2x')
+down_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/synth_generated1114x')
 
 # %%
-imgs = [x for x in orig_path.glob('*/*_t1_*.nii.gz')]
+imgs = [x for x in orig_path.glob('*/image_t1_*.nii.gz')]
 
 # %%
-len(imgs)
+print('Total images to process: ', len(imgs))
 
 # %%
 def process_img(p):
-    new_p = str(p).replace('synth_generated', 'synth_generated2x')
+    new_p = str(p).replace('synth_generated', 'synth_generated1114x')
     Path(new_p).parent.mkdir(parents=True, exist_ok=True)
-    print(p)
-    print(new_p)
-    # img = sitk.ReadImage(str(p))
+    
+    img = sitk.ReadImage(str(p))
+    labmap = sitk.ReadImage(str(p).replace('image', 'labels'))
+    
+    res_img = resample_volume(img, [1, 1, 1.4], sitk.sitkLinear)
+    res_labmap = resample_volume(labmap, [1, 1, 1.4], sitk.sitkNearestNeighbor)
 
-    image_interpolator = sitk.sitkNearestNeighbor if 'labels' in new_p else sitk.sitkLinear 
-    print(image_interpolator)
-    # res_img = resample_volume(img, [2, 2, 2], image_interpolator)
-    # sitk.WriteImage(res_img, new_p)
+    res_img_array = sitk.GetArrayFromImage(res_img)
+    res_labmap_array = sitk.GetArrayFromImage(res_labmap)
+
+    res_img_cropped, min_coords, max_coord = crop_image_to_content(res_img_array)
+    res_labmap_croped, _, __ = crop_image_to_content(res_labmap_array, min_coords, max_coord)
+
+    res_img = sitk_cropp_padd_img_to_size(sitk.GetImageFromArray(res_img_cropped), [256, 256, 124])
+    res_labmap = sitk_cropp_padd_img_to_size(sitk.GetImageFromArray(res_labmap_croped), [256, 256, 124])
+
+    sitk.WriteImage(res_img, new_p)
+    sitk.WriteImage(res_labmap, str(new_p).replace('image', 'labels'))
     return 1
 
 # %% [markdown]
@@ -51,6 +61,4 @@ def process_img(p):
 
 # %%
 with Pool(10) as p:
-    r = list(tqdm(p.imap(process_img, imgs[:10]), total=len(imgs)))
-
-# %%
+    r = list(tqdm(p.imap(process_img, imgs[:]), total=len(imgs)))
