@@ -37,12 +37,17 @@ CHKP_PATHS = [Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuni
               Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_bvisaSST_tverskyLoss_monaBasicUnet-fullFinetune/runs/2023-04-12_15-47-29/checkpoints/epoch-125-Esubj-0.4259.ckpt'),
               Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_noSynthAugm_monaiUnet/runs/2023-04-26_12-07-40/checkpoints/epoch-105-Esubj-0.2933.ckpt'),
               Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_SynthAugm_monaiUnet/runs/2023-04-26_12-18-13/checkpoints/epoch-100-Esubj-0.4202.ckpt'),
-              
+              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_via11SegmSST_monaiUnet-fullFinetune/runs/2023-04-24_12-27-00/checkpoints/epoch-072-Esubj-0.4867.ckpt'),
+              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_noSST_monaiUnet-fullFinetune/runs/2023-04-24_13-28-18/checkpoints/epoch-260-Esubj-0.4866.ckpt'),
+              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_bvisaSST_monaiUnet-fullFinetune/runs/2023-04-24_17-32-57/checkpoints/epoch-069-Esubj-0.5766.ckpt'),
               ]
 
 GOOD_subj_1 = ['sub-via052', 'sub-via320', 'sub-via325', 'sub-via273']
-MEH_subj_2 = ['sub-via043', 'sub-via065', 'sub-via127', 'sub-via139',]
+MEH_subj_2 = ['sub-via043', 'sub-via065', 'sub-via127', 'sub-via139', 'sub-via081', 'sub-via160', 'sub-via186', 'sub-via224']
 BAD_subj_3 = ['sub-via135', 'sub-via191', 'sub-via311', 'sub-via365']
+
+
+
 SUBJ2GENERATE = GOOD_subj_1 + MEH_subj_2 + BAD_subj_3
 
 for CHKP in CHKP_PATHS:
