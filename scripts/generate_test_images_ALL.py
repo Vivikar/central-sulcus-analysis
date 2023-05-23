@@ -32,14 +32,7 @@ from src.data.bvisa_dm import CS_Dataset
 sitk.ProcessObject_SetGlobalWarningDisplay(False)
 
 
-CHKP_PATHS = [Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_tverskyLoss_monaBasicUnet-fullTraining/runs/2023-04-12_13-42-02/checkpoints/epoch-045-Esubj-0.4378.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_bvisaSST_tverskyLoss_monaBasicUnet-fullFinetune/runs/2023-04-12_15-47-29/checkpoints/epoch-125-Esubj-0.4259.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_bvisaSST_tverskyLoss_monaBasicUnet-fullFinetune/runs/2023-04-12_15-47-29/checkpoints/epoch-125-Esubj-0.4259.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_noSynthAugm_monaiUnet/runs/2023-04-26_12-07-40/checkpoints/epoch-105-Esubj-0.2933.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_SynthAugm_monaiUnet/runs/2023-04-26_12-18-13/checkpoints/epoch-100-Esubj-0.4202.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_via11SegmSST_monaiUnet-fullFinetune/runs/2023-04-24_12-27-00/checkpoints/epoch-072-Esubj-0.4867.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_noSST_monaiUnet-fullFinetune/runs/2023-04-24_13-28-18/checkpoints/epoch-260-Esubj-0.4866.ckpt'),
-              Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_bvisaSST_monaiUnet-fullFinetune/runs/2023-04-24_17-32-57/checkpoints/epoch-069-Esubj-0.5766.ckpt'),
+CHKP_PATHS = [Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_via11simBVISASST_tverskyLoss_monaBasicUnet-fullFinetune-MaxPool/runs/2023-04-27_15-07-50/checkpoints/epoch-106-Esubj-0.4295.ckpt'),
               ]
 
 GOOD_subj_1 = ['sub-via052', 'sub-via320', 'sub-via325', 'sub-via273']

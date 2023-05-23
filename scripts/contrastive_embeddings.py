@@ -30,7 +30,7 @@ from src.data.bvisa_dm import CS_Dataset
 
 sitk.ProcessObject_SetGlobalWarningDisplay(False)
 
-CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/via11-monai-BasicUnet-1.5x-skullstripped/runs/2023-04-21_12-58-28/checkpoints/epoch-464_val_loss-0.199.ckpt')
+CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/via11-monai-BasicUnet-2x-segmentDice+contrastive/runs/2023-04-20_16-15-20/checkpoints/epoch-265_val_loss-0.289.ckpt')
 
 out_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/contrastive_embeddings')
 
@@ -46,7 +46,9 @@ print(sst_cfg.data)
 sst_model = sst_model.load_from_checkpoint(CHKP).to('cuda')
 
 # for segm_contr take 1 MLP layer
-sst_model.mlp_head = nn.Sequential(*list(sst_model.mlp_head.children())[:-2])
+sst_model.mlp_head = nn.Sequential(*list(sst_model.mlp_head.children())[:-6])
+print('MLP Head \n', sst_model.mlp_head)
+# raise ValueError('stop here')
 sst_model.eval()
 # via11DS = CS_Dataset('via11', 'mp2rage_raw',
 #                      'bvisa_CS', dataset_path='',
@@ -57,6 +59,23 @@ sst_model.eval()
 results = []
 
 # for i in tqdm(range(len(via11DS))):
+for i in tqdm(range(len(sst_ds.train_dataset))):
+    val_sample = sst_ds.train_dataset.get_N_samples(i, 50)
+    caseid = sst_ds.train_dataset.img_dirs[i].name
+
+    for img in val_sample:
+    # target = val_sample['target']
+        with torch.no_grad():
+            mlp_embed = sst_model.forward(img.unsqueeze(0).to('cuda'))[0]
+            # encoder_embed = sst_model.encoder(img.unsqueeze(0).to('cuda')).to('cpu')
+            # mlp_embed = sst_model(img.unsqueeze(0).to('cuda')).to('cpu')
+
+        results.append({'caseid': caseid,
+                        # 'encoder_embed': encoder_embed.to('cpu').numpy(),
+                        'mlp_embed': mlp_embed.to('cpu').numpy(),
+                        })
+
+# for i in tqdm(range(len(via11DS))):
 for i in tqdm(range(len(sst_ds.val_dataset))):
     val_sample = sst_ds.val_dataset.get_N_samples(i, 50)
     caseid = sst_ds.val_dataset.img_dirs[i].name
@@ -64,7 +83,7 @@ for i in tqdm(range(len(sst_ds.val_dataset))):
     for img in val_sample:
     # target = val_sample['target']
         with torch.no_grad():
-            mlp_embed = sst_model.forward(img.unsqueeze(0).to('cuda'))
+            mlp_embed = sst_model.forward(img.unsqueeze(0).to('cuda'))[0]
             # encoder_embed = sst_model.encoder(img.unsqueeze(0).to('cuda')).to('cpu')
             # mlp_embed = sst_model(img.unsqueeze(0).to('cuda')).to('cpu')
 
@@ -75,5 +94,5 @@ for i in tqdm(range(len(sst_ds.val_dataset))):
 
 out_path.mkdir(parents=True, exist_ok=True)
 results = pd.DataFrame(results)
-results.to_csv(out_path / 'sst_embeds.csv')
-results.to_pickle(out_path / 'sst_embeds.pkl')
+results.to_csv(out_path / 'sst_embeds_all.csv')
+results.to_pickle(out_path / 'sst_embeds_all.pkl')

@@ -70,7 +70,8 @@ class ContrastiveDataSet(data.Dataset):
                         for i in range(self.nviews)]
 
         views_images = self._load_images(views_paths)
-
+        for i in views_images:
+            print(i.shape)
         return (views_images, -1)
 
     def get_N_samples(self, index, N_samples):

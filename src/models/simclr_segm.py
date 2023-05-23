@@ -49,7 +49,7 @@ class SimCLRSegm(pl.LightningModule):
 
         # calculate u-net embeding dimension after max pooling
         # embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
-        embed_dim = 131072    # TODO:  Hardcoded for now FOR BVISA DATA RETRAINING
+        embed_dim = 131_072    # TODO:  Hardcoded for now FOR BVISA DATA RETRAINING
         print(f'U-Net Embedding dimension: {embed_dim}')
         self.learning_rate = lr
 

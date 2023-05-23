@@ -1,7 +1,7 @@
 _target_: src.data.self_supervised_segm.ContrastiveDataModule
 
 dataset_cfg:
-  dataset: brainvisa
+  dataset: via11
   nviews: 2
   target: GM
   skull_strip: null #'half' # half
@@ -9,9 +9,9 @@ dataset_cfg:
   # - 1.5
   # - 1.5 
   # - 1.5  
-  use_2x2x2_preproc: True
-  padd2same_size: 128-128-128 # wether to pad the image to the same size False for via11
-
+  use_2x2x2_preproc: False
+  padd2same_size: null # wether to pad the image to the same size False for via11
+# CHANGE ALSO PADD TO DOUBLE THE SIZE?
 train_batch_size: 3
 validation_batch_size: 3
 num_workers: 10

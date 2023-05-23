@@ -43,16 +43,17 @@ class SimCLR(pl.LightningModule):
         # extract information about last layer embedding dimension
         # number_of_layers = len(self.encoder.f_maps)
         # last_layer_kernels = self.encoder.f_maps[-1]
-
+         
         # calculate u-net embeding dimension after max pooling
         # embed_dim = int(last_layer_kernels * ((img_dim/(2)**(number_of_layers - 1))**3)/(2**3))
-        embed_dim = 131072 # 49152 #64000 for synthseg  # NoMAxPool 131072 16384
+        embed_dim = 16384 # 49152 #64000 for synthseg  # NoMAxPool 131072 16384
+
+        print()
         print(f'U-Net Embedding dimension: {embed_dim}')
         self.learning_rate = lr
-        
         # The MLP for g(.) consists of Linear->ReLU->Linear
         self.mlp_head = nn.Sequential(
-                                    #   nn.MaxPool3d(kernel_size=2, stride=2),
+                                      nn.MaxPool3d(kernel_size=2, stride=2),
                                       nn.Flatten(),
                                       nn.Linear(embed_dim, self.hidden_dim),
                                       nn.ReLU(inplace=False),

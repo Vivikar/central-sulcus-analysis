@@ -27,9 +27,10 @@ class ContrastiveDataSet(data.Dataset):
                  nviews: int = 2,
                  padd2same_size: bool | str = False,
                  use_2x2x2_preproc: bool = True,
-                 skull_strip: bool | float | str = True,
+                 skull_strip: bool | float | str = False,
                  resample: list[float] | None = None,
                  target: str = 'GM',
+                 crop2content: bool = False
                  ):
         """ContrastiveDataSet
 
@@ -47,6 +48,7 @@ class ContrastiveDataSet(data.Dataset):
         self.dataset = dataset
         self.target = target
         self.nviews = nviews
+        self.crop2content = crop2content
         self.skull_strip = skull_strip
         self.paddd2same_size = padd2same_size
         self.resample = list(resample) if resample is not None else None
@@ -207,13 +209,15 @@ class ContrastiveDataSet(data.Dataset):
 
         # extract only the required label
         if self.target == 'GM' and self.dataset == 'via11':
-            images = [((x == 3) | (x == 42)).astype(int) for x in images]
+            # images = [((x == 3) | (x == 42)).astype(np.int8) for x in images]
+            pass
         elif self.target == 'GM' and self.dataset == 'brainvisa':
             images = [((x >= 1000) & (x < 3000)).astype(int) for x in images]
         # convert to torch tensors and return
         images = [torch.tensor(i, dtype=torch.long) for i in images]
 
         return images
+    
     def _preporces_sitk(self, img, labelmap=False):
         image_interpolator = sitk.sitkLinear if not labelmap else sitk.sitkNearestNeighbor
         if self.resample is not None:

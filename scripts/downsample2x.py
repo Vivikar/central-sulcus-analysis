@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.append(str(Path.cwd().parent))
 
-
+import numpy as np
 # %%
 ## tqdm for loading bars
 from tqdm import tqdm
@@ -40,12 +40,14 @@ def process_img(p):
     img = sitk.ReadImage(str(p))
     labmap = sitk.ReadImage(str(p).replace('image', 'labels'))
     
-    res_img = resample_volume(img, [1, 1, 1.4], sitk.sitkLinear)
-    res_labmap = resample_volume(labmap, [1, 1, 1.4], sitk.sitkNearestNeighbor)
+    res_img = resample_volume(img, [1.1, 1.1, 1.5], sitk.sitkLinear)
+    res_labmap = resample_volume(labmap, [1.1, 1.1, 1.5], sitk.sitkNearestNeighbor)
 
     res_img_array = sitk.GetArrayFromImage(res_img)
     res_labmap_array = sitk.GetArrayFromImage(res_labmap)
-
+    
+    res_labmap_array = ((res_labmap_array == 3)|(res_labmap_array == 42)).astype(np.uint8)
+    
     res_img_cropped, min_coords, max_coord = crop_image_to_content(res_img_array)
     res_labmap_croped, _, __ = crop_image_to_content(res_labmap_array, min_coords, max_coord)
 
