@@ -42,8 +42,8 @@ from monai.metrics import compute_dice, compute_hausdorff_distance, compute_iou
 # # Load segmentation model
 
 # %%
-CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_via11simBVISASST_tverskyLoss_monaBasicUnet-fullFinetune-MaxPool/runs/2023-04-27_15-07-50/checkpoints/epoch-106-Esubj-0.4295.ckpt')
-
+CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_via11SegmSST_monaiUnet-fullFinetune/runs/2023-05-24_11-16-51/checkpoints/epoch-253-Esubj-0.4463.ckpt')
+print(CHKP)
 out_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/segm_results/skull_stripped_images')
 
 exp_name = CHKP.parent.parent.parent.parent.name
@@ -72,7 +72,7 @@ croppadd2same_size =  finetune_cfg.data.dataset_cfg.get('padd2same_size') if fin
 # %%
 via11DS = CS_Dataset('via11', 'mp2rage_skull_stripped',
                     'bvisa_CS', dataset_path='',
-                     split='ALL',
+                     split='only_good',
                      crop2content=True,
                      preload=False,
                      resample=finetune_cfg.data.dataset_cfg.resample,
@@ -91,7 +91,8 @@ for idx in tqdm(range(len(via11DS))):
 
     dice = compute_dice(out_1hot, target_1hot, include_background=False)
     iou = compute_iou(out_1hot, target_1hot, include_background=False)
-    hausdorff_distance = compute_hausdorff_distance(out_1hot, target_1hot, include_background=False)
+    hausdorff_distance = compute_hausdorff_distance(out_1hot, target_1hot,
+                                                    include_background=False)
 
     res = {'caseid': via11DS.caseids[idx],
            'dice': dice.item(),
@@ -103,6 +104,6 @@ experiment_results = pd.DataFrame(experiment_results)
 experiment_results = experiment_results.set_index('caseid')
 experiment_results.loc['MEAN'] = experiment_results.mean()
 experiment_results.loc['STD'] = experiment_results.std()
-experiment_results.to_csv(f'{out_path}/via11_metrics_ALL.csv')
+experiment_results.to_csv(f'{out_path}/via11_metrics.csv')
 
 pprint(experiment_results)

@@ -1,7 +1,7 @@
 # @package _global_
 
 # task name, determines output directory path
-task_name: "CS1x_via11simBVISASST_tverskyLoss_monaBasicUnet-fullFinetuning-NOMaxPool"
+task_name: "CS1x_via11SegmSST_monaiUnet-fullFinetune"
 
 # tags to help you identify your experiments
 tags: ["dev"]

@@ -12,6 +12,6 @@ dataset_cfg:
   use_2x2x2_preproc: False
   padd2same_size: null # wether to pad the image to the same size False for via11
 # CHANGE ALSO PADD TO DOUBLE THE SIZE?
-train_batch_size: 3
-validation_batch_size: 3
+train_batch_size: 2
+validation_batch_size: 2
 num_workers: 10

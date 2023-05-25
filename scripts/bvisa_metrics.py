@@ -41,7 +41,7 @@ from monai.metrics import compute_dice, compute_hausdorff_distance, compute_iou
 # # Load segmentation model
 
 # %%
-CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS2x_via11SegmSST_monaiUnet-frozenEncoder/runs/2023-04-21_12-16-59/checkpoints/epoch-119-Esubj-0.6256.ckpt')
+CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_noSST_SynthAugm_monaiUnet/runs/2023-04-26_12-18-13/checkpoints/epoch-100-Esubj-0.4202.ckpt')
 
 out_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/brainvisa_results/nobackup')
 
@@ -87,7 +87,8 @@ for idx in tqdm(range(len(via11DS))):
 
     dice = compute_dice(out_1hot, target_1hot, include_background=False)
     iou = compute_iou(out_1hot, target_1hot, include_background=False)
-    hausdorff_distance = compute_hausdorff_distance(out_1hot, target_1hot, include_background=False)
+    hausdorff_distance = compute_hausdorff_distance(out_1hot, target_1hot,
+                                                    include_background=False)
 
     res = {'caseid': via11DS.caseids[idx],
            'dice': dice.item(),

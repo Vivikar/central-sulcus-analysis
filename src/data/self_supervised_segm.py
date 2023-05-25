@@ -136,8 +136,7 @@ class ContrastiveDataSet(data.Dataset):
             # reorient images
             images = [sitk.DICOMOrient(i, 'LAS') for i in images]
         elif self.dataset == 'via11':
-            images = [sitk.DICOMOrient(i, 'LAS') for i in images]
-
+            images = [sitk.DICOMOrient(i, 'LSA') for i in images]
         images = [self._preporces_sitk(img) for img in images]
 
         if self.paddd2same_size:
@@ -197,7 +196,8 @@ class ContrastiveDataSet(data.Dataset):
             # reorient images
             images = [sitk.DICOMOrient(i, 'LAS') for i in images]
         elif self.dataset == 'via11':
-            images = [sitk.DICOMOrient(i, 'LAS') for i in images]
+            # pass
+            images = [sitk.DICOMOrient(i, 'LSA') for i in images]
 
         images = [self._preporces_sitk(img, labelmap=True) for img in images]
 

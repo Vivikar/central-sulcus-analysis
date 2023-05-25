@@ -19,8 +19,8 @@ scheduler:
 monai: True
 freeze_encoder: False
 
-segm_encoder: False
-encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/via11-monai-BasicUnet-bvisaSim-skullstripped-noMaxPool/runs/2023-04-27_13-26-21/checkpoints/epoch-295_val_loss-0.171.ckpt
+segm_encoder: True
+encoder_chkp: /mrhome/vladyslavz/git/central-sulcus-analysis/logs_sst/via11-monai-BasicUnet-bvisaSim-skullstripped-SEGM1x/runs/2023-05-24_00-32-24/checkpoints/epoch-410_val_loss-0.162.ckpt
 
 net:
   _target_: monai.networks.nets.basic_unet.BasicUNet
