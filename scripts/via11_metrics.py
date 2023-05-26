@@ -33,16 +33,17 @@ from src.data.bvisa_dm import CS_Dataset
 import SimpleITK as sitk
 
 from src.data.bvisa_dm import CS_Dataset
-
+from src.utils.general import post_prcosess_segm
 import matplotlib.pyplot as plt
 
 from monai.metrics import compute_dice, compute_hausdorff_distance, compute_iou
+import subprocess
 
 # %% [markdown]
 # # Load segmentation model
 
 # %%
-CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_via11SegmSST_monaiUnet-fullFinetune/runs/2023-05-24_11-16-51/checkpoints/epoch-253-Esubj-0.4463.ckpt')
+CHKP = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/logs_finetuning/CS1x_via11SegmSST_monaiUnet-fullFinetune/runs/2023-05-24_11-16-51/checkpoints/epoch-090-Esubj-0.4443.ckpt')
 print(CHKP)
 out_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/data/via11/nobackup/segm_results/skull_stripped_images')
 
@@ -63,11 +64,11 @@ segm_model = segm_model.eval()
 # # Load via validation images
 
 # %% USE ONLY FOR 1X DATASET
-# finetune_cfg.data.dataset_cfg.resample = [1, 1, 1.4]
+finetune_cfg.data.dataset_cfg.resample = [1, 1, 1.4]
 
 
 # %%
-croppadd2same_size =  finetune_cfg.data.dataset_cfg.get('padd2same_size') if finetune_cfg.data.dataset_cfg.get('padd2same_size') else finetune_cfg.data.dataset_cfg.get('croppadd2same_size')
+croppadd2same_size = finetune_cfg.data.dataset_cfg.get('padd2same_size') if finetune_cfg.data.dataset_cfg.get('padd2same_size') else finetune_cfg.data.dataset_cfg.get('croppadd2same_size')
 
 # %%
 via11DS = CS_Dataset('via11', 'mp2rage_skull_stripped',
@@ -86,6 +87,13 @@ for idx in tqdm(range(len(via11DS))):
 
     with torch.no_grad():
         out = segm_model.forward(sample['image'].unsqueeze(0).to('cuda'))
+
+    # # apply post-processing
+    # segm_pred_bin = torch.softmax(out.cpu(), dim=1)[:, 0, :, :, :].squeeze(0).squeeze(0).numpy()
+    # segm_pred_bin = np.logical_not(segm_pred_bin > 0.5).astype(np.int16)
+    # segm_pred_bin = post_prcosess_segm(segm_pred_bin, dilations=1)
+    # out_bin = torch.tensor(segm_pred_bin, dtype=torch.int64, device='cpu').unsqueeze(0)
+
     out_bin = torch.argmax(torch.softmax(out, dim=1), dim=1).cpu()
     out_1hot = torch.nn.functional.one_hot(out_bin, num_classes=2).permute(0, 4, 1, 2, 3)
 

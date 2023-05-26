@@ -1,6 +1,8 @@
 import numpy as np
 import SimpleITK as sitk
 from scipy.ndimage import distance_transform_edt
+from skimage.morphology import binary_dilation, label
+
 
 FreeSurferColorLUT = 'utils/FreeSurferColorLUT.txt'
 def fs_lut(lut_path:str=FreeSurferColorLUT):
@@ -152,3 +154,21 @@ def gaussian_distance_map(binary_mask:np.ndarray,
     
     # Return the inverted distance map
     return smoothed_distance_map
+
+
+
+def post_prcosess_segm(segm:np.ndarray, dilations=1):
+    
+    # dilate image to include separated components
+    # of the same sulci
+    dil = segm[:, :, :]
+    for i in range(dilations):
+        dil = binary_dilation(dil)
+
+    # leave ony the top 3 largest components
+    lab_dil = label(dil, connectivity=2)
+    labels, counts = np.unique(lab_dil, return_counts=True)
+    top3_labels = labels[np.argsort(counts)[::-1]][:3]
+    segm[np.logical_not(np.isin(lab_dil, top3_labels))] = 0
+
+    return segm

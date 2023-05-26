@@ -19,7 +19,7 @@ import SimpleITK as sitk
 sitk.ProcessObject_SetGlobalWarningDisplay(False)
 # pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
-
+from src.utils.general import post_prcosess_segm
 log = utils.get_pylogger(__name__)
 
 torch.set_float32_matmul_precision('medium')
@@ -87,8 +87,16 @@ for CHKP in CHKP_PATHS:
         with torch.no_grad():
             segm_pred = segm_model(img.unsqueeze(0).to('cuda')).to('cpu')
 
+        
+        # apply post-processing
+        segm_pred_bin = torch.softmax(segm_pred.cpu(), dim=1)[:, 0, :, :, :].squeeze(0).squeeze(0).numpy()
+        segm_pred_bin = np.logical_not(segm_pred_bin > 0.5).astype(np.int16)
+        segm_pred_bin = post_prcosess_segm(segm_pred_bin, dilations=0)
+        out_bin = torch.tensor(segm_pred_bin, dtype=torch.int64, device='cpu').unsqueeze(0)
+        
+        # out_bin = torch.argmax(torch.softmax(segm_pred, dim=1), dim=1).cpu()
+        
         target_1hot = torch.nn.functional.one_hot(target.unsqueeze(0), num_classes=2).permute(0, 4, 1, 2, 3)
-        out_bin = torch.argmax(torch.softmax(segm_pred, dim=1), dim=1).cpu()
         out_1hot = torch.nn.functional.one_hot(out_bin, num_classes=2).permute(0, 4, 1, 2, 3)
 
         dice = compute_dice(out_1hot, target_1hot, include_background=False).item()
