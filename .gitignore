@@ -138,3 +138,10 @@ data/brainvisa_augm
 .vscode
 
 logs/
+data/
+
+logs_finetuning/
+logs_sst/
+sst_logs/
+finetuning_logs/
+sulci_segm_logs/
