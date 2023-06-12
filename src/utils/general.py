@@ -3,8 +3,8 @@ import SimpleITK as sitk
 from scipy.ndimage import distance_transform_edt
 from skimage.morphology import binary_dilation, label
 
-
 FreeSurferColorLUT = 'utils/FreeSurferColorLUT.txt'
+
 def fs_lut(lut_path:str=FreeSurferColorLUT):
     """Retrieves the FreeSurfer LUT
     

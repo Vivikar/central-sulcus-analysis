@@ -1,17 +1,21 @@
-import pytorch_lightning as pl
 import monai
+import pytorch_lightning as pl
 import torch
 import torchmetrics
-from monai.networks.nets import BasicUNet
 from kornia.losses import HausdorffERLoss3D
+from monai.networks.nets import BasicUNet
 from torchmetrics import MaxMetric, MeanMetric
+
+from src.models.losses.dice import SoftDiceLoss
+from src.models.monai_impl import BasicUNetEncoder
 from src.models.simclr import SimCLR
 from src.models.unet3d.model import UNet3D
 from src.utils.metrics.error_rate import SulciErrorLocal, SulciErrorSubject
-from src.models.monai_impl import BasicUNetEncoder
-from src.models.losses.dice import SoftDiceLoss
+
 
 class RegrUNet3D(pl.LightningModule):
+    """U-Net 3D model for regression tasks.
+    Used in experiments with predicting the continuous sulci localization"""
     def __init__(
             self,
             lr: float,
@@ -69,34 +73,6 @@ class RegrUNet3D(pl.LightningModule):
         self.train_mse = torchmetrics.MeanSquaredError()
         self.val_mse = torchmetrics.MeanSquaredError()
         self.test_mse = torchmetrics.MeanSquaredError()
-        # avg_type = 'macro' if self.out_channels > 2 else 'micro'
-
-        # # metrics to track (ignore_index=0 is for background class)
-        # self.train_dsc = torchmetrics.Dice(ignore_index=0,
-        #                                    average=avg_type,
-        #                                    num_classes=self.out_channels)
-        # self.train_eloc = SulciErrorLocal(ignore_index=[0])
-        # self.train_esubj = SulciErrorSubject(ignore_index=[0])
-
-        # self.val_dsc = torchmetrics.Dice(ignore_index=0,
-        #                                  average=avg_type,
-        #                                  num_classes=self.out_channels)
-        # self.val_eloc = SulciErrorLocal(ignore_index=[0])
-        # self.val_esubj = SulciErrorSubject(ignore_index=[0])
-
-        # self.test_dsc = torchmetrics.Dice(ignore_index=0,
-        #                                   average=avg_type,
-        #                                   num_classes=self.out_channels)
-        # self.test_eloc = SulciErrorLocal(ignore_index=[0])
-        # self.test_esubj = SulciErrorSubject(ignore_index=[0])
-        # self.val_dsc_best = MaxMetric()
-
-        # # for averaging loss across batches
-        # self.test_loss = MeanMetric()
-
-        # if self.extra_loss == 'hausdorff':
-        #     self.hausdorff = HausdorffERLoss3D()
-
         self.save_hyperparameters()
 
     def forward(self, x):
@@ -104,11 +80,6 @@ class RegrUNet3D(pl.LightningModule):
             return self.net.forward(x)
         else:
             return self.net(x)
-
-    # def on_train_start(self):
-    #     # by default lightning executes validation step sanity checks before training starts,
-    #     # so we need to make sure val_acc_best doesn't store accuracy from these checks
-    #     self.val_dsc_best.reset()
 
     def _on_step(self, batch, batch_idx):
         x = batch['image']  # (batch_size, 1, 128, 128, 128)
@@ -178,23 +149,7 @@ class RegrUNet3D(pl.LightningModule):
         train_mse = self.val_mse(input, target)
         self.log("train/mse", train_mse, on_step=True,
                  prog_bar=True, logger=True)
-        # self.train_dsc(input, target)
-        # self.log('train/dsc', self.train_dsc,
-        #          on_step=True,  on_epoch=True,
-        #          prog_bar=True, logger=True,
-        #          batch_size=batch_size)
 
-        # self.train_eloc(input, target)
-        # self.log('train/Eloc', self.train_eloc,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
-
-        # self.train_esubj(input, target)
-        # self.log('train/Esubj', self.train_esubj,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -210,40 +165,7 @@ class RegrUNet3D(pl.LightningModule):
         val_mse = self.val_mse(input, target)
         self.log("val/mse", val_mse, on_step=False)
 
-        # self.val_dsc(input, target)
-        # self.log('val/dsc', self.val_dsc,
-        #          on_step=True,  on_epoch=True,
-        #          prog_bar=True, logger=True,
-        #          batch_size=batch_size)
-
-        # self.val_eloc(input, target)
-        # self.log('val/Eloc', self.val_eloc,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
-
-        # self.val_esubj(input, target)
-        # self.log('val/Esubj', self.val_esubj,
-        #          on_epoch=True, prog_bar=True,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
-        # if batch[1]:
-        #     self.test_step(batch[1], batch_idx)
-
         return loss
-
-    # def validation_epoch_end(self, outputs: list):
-    #     # get current val dsc
-    #     dsc = self.val_dsc.compute()
-
-    #     # update best so far val dsc
-    #     self.val_dsc_best(dsc)
-
-    #     # log `val_dsc_best` as a value through `.compute()` method, instead
-    #     # of as a metric object otherwise metric would be reset by lightning after each epoch
-    #     self.log("val/dsc_best", self.val_dsc_best.compute(), prog_bar=True)
-
-        # return loss
 
     def configure_optimizers(self):
         optimizer = self.hparams.optimizer(params=self.parameters(), lr=self.learning_rate)

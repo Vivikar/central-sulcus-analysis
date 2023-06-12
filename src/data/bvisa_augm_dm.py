@@ -97,14 +97,9 @@ class CS_Dataset(Dataset):
         # load a random image from the subject
         rand_idx = np.random.randint(0, len(self.img_paths[idx]))
 
-        # TODO Think how to properly sepearate the image now into left and right
-        # bit for now leaving it like this
         image = sitk.ReadImage(str(self.img_paths[idx][rand_idx]))
         orig_target = sitk.ReadImage(str(self.target_paths[idx][rand_idx]))
 
-        # # TODO: Reorient image to looks like Synthseg
-        # image = sitk.DICOMOrient(image, 'RIP')
-        # orig_target = sitk.DICOMOrient(orig_target, 'RIP') 
 
         # remove half of the brain
         if self.target in ['left_sulci', 'right_sulci'] and self.use_half_brain:
@@ -217,15 +212,6 @@ class CS_Dataset(Dataset):
             return torch.Tensor(image), torch.tensor(target, dtype=torch.long)
 
     def _postprocess(self, image: torch.Tensor, target: torch.Tensor):
-        # padd if needed
-        # TODO: FIX THE ERROR WITH THE ACTIVE PADDING
-        # if self.padd2same_size:
-        #     size_key = 'original' if self.resample is None else str(self.resample)
-        #     # TODO: MAKE BETTER PADDING DIMENSIONS SELECTIONS
-        #     pad_dims = (256, 256, 256) # bvisa_padding_dims[self.input][size_key]
-        #     padd = SpatialPad(pad_dims, mode='constant', value=0)
-        #     image = padd(torch.unsqueeze(image, dim=0))[0]
-        #     target = padd(torch.unsqueeze(target, dim=0))[0]
 
         # add channel dimension to the image
         image = torch.unsqueeze(image, 0)

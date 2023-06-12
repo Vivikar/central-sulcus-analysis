@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# REFER TO https://monai-dev.readthedocs.io/en/fixes-sphinx/_sources/networks.rst.txt for more info
 from typing import Optional, Sequence, Union
 
 import torch
@@ -50,13 +50,6 @@ class BasicUNetEncoder(nn.Module):
         self.down_3 = Down(spatial_dims, fea[2], fea[3], act, norm, bias, dropout)
         self.down_4 = Down(spatial_dims, fea[3], fea[4], act, norm, bias, dropout)
 
-        # self.upcat_4 = UpCat(spatial_dims, fea[4], fea[3], fea[3], act, norm, bias, dropout, upsample)
-        # self.upcat_3 = UpCat(spatial_dims, fea[3], fea[2], fea[2], act, norm, bias, dropout, upsample)
-        # self.upcat_2 = UpCat(spatial_dims, fea[2], fea[1], fea[1], act, norm, bias, dropout, upsample)
-        # self.upcat_1 = UpCat(spatial_dims, fea[1], fea[0], fea[5], act, norm, bias, dropout, upsample, halves=False)
-
-        # self.final_conv = Conv["conv", spatial_dims](fea[5], out_channels, kernel_size=1)
-
     def forward(self, x: torch.Tensor):
         """
         Args:
@@ -76,12 +69,6 @@ class BasicUNetEncoder(nn.Module):
         x3 = self.down_3(x2)
         x4 = self.down_4(x3)
 
-        # u4 = self.upcat_4(x4, x3)
-        # u3 = self.upcat_3(u4, x2)
-        # u2 = self.upcat_2(u3, x1)
-        # u1 = self.upcat_1(u2, x0)
-
-        # logits = self.final_conv(u1)
         return x4
     
 class BasicUNetEncoderDecoder(nn.Module):

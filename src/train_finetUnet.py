@@ -73,11 +73,6 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         "trainer": trainer,
     }
 
-    # Problems with logging hyperparameters of TensorboardLogger
-    # if logger:
-    #     log.info("Logging hyperparameters!")
-    #     utils.log_hyperparameters(object_dict)
-
     if cfg.get("train"):
         log.info("Starting training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))

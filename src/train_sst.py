@@ -16,7 +16,6 @@ import src.utils.default as utils
 log = utils.get_pylogger(__name__)
 
 torch.set_float32_matmul_precision('medium')
-# torch.autograd.set_detect_anomaly(True)
 
 @utils.task_wrapper
 def train(cfg: DictConfig) -> Tuple[dict, dict]:
@@ -60,14 +59,6 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger,
                                                
                                                )
-
-    # log.info('Finding best learning rate...')
-    # lr_finder = trainer.tuner.lr_find(model=model, datamodule=datamodule)
-    # # update hparams of the model
-    # new_lr = lr_finder.suggestion()
-    # model.hparams.learning_rate = new_lr
-    # print(f"New learning rate: {new_lr}")
-    
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
@@ -76,11 +67,6 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
         "logger": logger,
         "trainer": trainer,
     }
-
-    # Problems with logging hyperparameters of TensorboardLogger
-    # if logger:
-    #     log.info("Logging hyperparameters!")
-    #     utils.log_hyperparameters(object_dict)
 
     if cfg.get("train"):
         log.info("Starting training!")

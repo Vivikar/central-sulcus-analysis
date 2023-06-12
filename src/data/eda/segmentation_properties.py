@@ -7,12 +7,6 @@ import open3d as o3d
 from data.config import SAMSEG_PATH
 import nibabel as nb
 
-# Mesh properties to analyze
-# ['cluster_properties',
-#  'mesh_properties',
-# 'holes_filled_volume',
-# ]
-
 
 ALL_PROPERTIES = ['cs_segmentation_overlap']
 class SegmAnalyzer:
@@ -53,5 +47,3 @@ class SegmAnalyzer:
         
         return {'LCS_lebel2inters':lstats,
                 'RCS_lebel2inters':rstats}
-    
-    

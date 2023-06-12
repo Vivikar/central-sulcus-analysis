@@ -186,12 +186,6 @@ class BasicUNet3D(pl.LightningModule):
                  prog_bar=True, logger=True,
                  batch_size=batch_size)
 
-        # self.train_eloc(input, target)
-        # self.log('train/Eloc', self.train_eloc,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
-
         self.train_esubj(input, target)
         self.log('train/Esubj', self.train_esubj,
                  on_epoch=True, prog_bar=False,
@@ -216,12 +210,6 @@ class BasicUNet3D(pl.LightningModule):
                  on_step=True,  on_epoch=True,
                  prog_bar=True, logger=True,
                  batch_size=batch_size)
-
-        # self.val_eloc(input, target)
-        # self.log('val/Eloc', self.val_eloc,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
 
         self.val_esubj(input, target)
         self.log('val/Esubj', self.val_esubj,
@@ -257,12 +245,6 @@ class BasicUNet3D(pl.LightningModule):
                  on_epoch=True, prog_bar=True, batch_size=batch_size)
         self.log("test/dsc", self.test_dsc, on_step=False,
                  on_epoch=True, prog_bar=True, batch_size=batch_size)
-
-        # self.test_eloc(input, target)
-        # self.log('test/Eloc', self.test_eloc,
-        #          on_epoch=True, prog_bar=False,
-        #          on_step=True, logger=True,
-        #          batch_size=batch_size)
 
         self.test_esubj(input, target)
         self.log('test/Esubj', self.test_esubj,

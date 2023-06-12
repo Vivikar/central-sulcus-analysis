@@ -6,14 +6,6 @@ import sys
 import open3d as o3d
 from utils.mesh import dihedral_angle
 
-# Mesh properties to analyze
-# ['cluster_properties',
-#  'mesh_properties',
-# 'holes_filled_volume',
-# ]
-
-# TODO: Add spike Hausdorf distance measure
-
 ALL_PROPERTIES = ['cluster_properties',
                   'mesh_properties',
                   'holes_filled_volume',
