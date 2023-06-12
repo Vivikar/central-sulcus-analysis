@@ -1,0 +1,20 @@
+_target_: src.data.bvisa_augm_dm.CS_DataModule
+
+dataset_cfg:
+  dataset: bvisa
+  target: central_sulcus # all_sulci_bin/  left_sulci / right_sulci / central_sulcus
+  dataset_path: /mrhome/vladyslavz/git/central-sulcus-analysis/data/brainvisa_augm/nobackup/generated # ${paths.data_dir}/brainvisa_augm/nobackup/generated
+  use_half_brain: False
+  resample: null # if None no resampling
+    # - 2 
+    # - 2 
+    # - 2  
+  crop2content: False # wether to crop the image to the content
+  padd2same_size: 256-256-124 # wether to pad the image to the same size
+  
+  regresssion: False #'distance-transform'
+
+train_batch_size: 1
+validation_batch_size: 1
+num_workers: 0
+double_validation: True

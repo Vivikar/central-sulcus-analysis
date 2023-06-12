@@ -1,0 +1,16 @@
+_target_: src.data.self_supervised_dm.ContrastiveDataModule
+
+dataset_cfg:
+  dataset: via11
+  nviews: 2
+  skull_strip: null #'half' # half
+  crop2content: False
+  croppadd2samesize: null # '256-256-124'
+  resample: null # if None no resampling
+  # - 1
+  # - 1
+  # - 1.4
+  use_2x2x2_preproc: True
+train_batch_size: 3
+validation_batch_size: 3
+num_workers: 10

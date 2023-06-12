@@ -127,3 +127,28 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+data/brainvisa
+data/synthseg
+data/synthseg_2x2x2
+data/synthseg_2x2x2_corrected
+data/synthseg_corrected
+data/brainvisa_augm_2x2x2
+data/brainvisa_augm
+data/via11
+data/brainvisa_results
+.vscode
+
+logs/
+sulci_segm_logs/
+sst_logs/
+logs_finetuning/
+logs_sst/
+finetuning_logs/
+
+notebooks/drafts
+notebooks/lightning_logs
+
+.vscode
+
+results/
