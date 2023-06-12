@@ -148,3 +148,7 @@ finetuning_logs/
 
 notebooks/drafts
 notebooks/lightning_logs
+
+.vscode
+
+results/
