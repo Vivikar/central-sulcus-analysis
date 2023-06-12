@@ -82,10 +82,6 @@ for i in tqdm(INDX2GENERATE):
     res_path = Path(f'{out_path}/{exp_name}/{caseid}')
     res_path.mkdir(parents=True, exist_ok=True)
 
-    # re-orient to PSR (original VIA orientation)
-    # segm_pred_sitk = sitk.DICOMOrient(segm_pred_sitk, 'ASL')
-    # orig_img = sitk.ReadImage(str(via11DS.img_paths[i][0]))
-
     sitk.WriteImage(segm_pred_sitk, str(res_path/f'prediction.nii.gz'))
     sitk.WriteImage(orig_img, str(res_path/f'image.nii.gz'))
     sitk.WriteImage(target_img, str(res_path/f'target.nii.gz'))

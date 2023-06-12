@@ -210,16 +210,6 @@ class CS_eval_via(CS_Dataset):
         return torch.Tensor(image), torch.tensor(target, dtype=torch.long), torch.tensor(corr_target, dtype=torch.long)
 
     def _postprocess(self, image: torch.Tensor, target: torch.Tensor, corr_target):
-        # padd if needed
-        # TODO: FIX THE ERROR WITH THE ACTIVE PADDING
-        # if self.padd2same_size:
-        #     raise ValueError('Should not be used anymore')
-        #     size_key = 'original' if self.resample is None else str(self.resample)
-        #     pad_dims = bvisa_padding_dims[self.input][size_key]
-        #     padd = SpatialPad(pad_dims, mode='constant', value=0)
-        #     image = padd(torch.unsqueeze(image, dim=0))[0]
-        #     target = padd(torch.unsqueeze(target, dim=0))[0]
-
         # add channel dimension to the image
         image = torch.unsqueeze(image, 0)
         return image, target, corr_target

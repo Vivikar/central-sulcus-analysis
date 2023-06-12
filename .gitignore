@@ -145,3 +145,6 @@ sst_logs/
 logs_finetuning/
 logs_sst/
 finetuning_logs/
+
+notebooks/drafts
+notebooks/lightning_logs

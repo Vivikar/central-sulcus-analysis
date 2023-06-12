@@ -6,4 +6,3 @@
 ### Data generation
 `generate.sh` - scripts used from SynthSeg git repository to generate artificial data for the self-supervising task.
 
-Added here for tracking purposes.

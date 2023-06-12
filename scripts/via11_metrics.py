@@ -39,7 +39,6 @@ import matplotlib.pyplot as plt
 from monai.metrics import compute_dice, compute_hausdorff_distance, compute_iou
 import subprocess
 
-# %% [markdown]
 # # Load segmentation model
 
 # %%

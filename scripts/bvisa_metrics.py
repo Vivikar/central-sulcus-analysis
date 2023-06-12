@@ -104,22 +104,5 @@ experiment_results.to_csv(f'{out_path}/bvisa_metrics.csv')
 
 
 # %%
-# plt.imshow(out_hot[0, 1, 120, :, :], cmap='gray', alpha=0.5)
-# plt.imshow(target_1hot[0, 1, 120, :, :], cmap='gray', alpha=0.5)
-# plt.show()
-
-
-
-# fig, axs = plt.subplots(1, 1, figsize=(5, 5))
-# slice = 120
-# axs.imshow(sample['image'][0, slice, :, :], cmap='gray', alpha=0.5)
-# axs.imshow(sample['target'][slice, :, :], cmap='gray', alpha=0.5)
-# plt.show()
-
-# %%
 pprint(experiment_results)
-
-# %%
-
-
 
