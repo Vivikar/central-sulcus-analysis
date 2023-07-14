@@ -203,32 +203,37 @@ for s in sulci:
 
 def process_sulc_pair(x):
     sulc, sulc2 = x
-
+    # register the sulci min(a->b or b->a)
+    
+    # need to flip if different hemispheres
+    if sulc[0] != sulc2[0]:
+        sulc2[3] = sitk.Flip(sulc2[3], [False, False, True])
+        
+    # register the sulci with ICP
+    s1_points = np.stack(np.where(sitk.GetArrayFromImage(sulc[3]))).T
+    s2_points = np.stack(np.where(sitk.GetArrayFromImage(sulc2[3]))).T
+    
+    # finds the transformation matrix sending a to b
+    _, __, cost_s1_to_s2 = trimesh.registration.icp(a=s1_points, b=s2_points, max_iterations=1000)
+    _, __, cost_s2_to_s1 = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000)
+    
+    return min(cost_s1_to_s2, cost_s2_to_s1), f'{sulc[0]}_{sulc[1]}-{sulc2[0]}_{sulc2[1]}'
 # %%
 # create a matrix of pairwise distances between sulci
 
 def sulcus_dist(sulc: list, sulclist: list[list] = sulci_list):
     dists = []
     reg_keys = []
-    for sulc2 in tqdm(sulclist):
+
+    sulc_pairs_list = [(sulc, sulc2) for sulc2 in sulclist]
+    
+    with mp.Pool(48) as p:
+        r = list(p.imap(process_sulc_pair, sulc_pairs_list))
+
+    for d, k in r:
+        dists.append(d)
+        reg_keys.append(k)
         
-        # register the sulci min(a->b or b->a)
-        
-        # need to flip if different hemispheres
-        if sulc[0] != sulc2[0]:
-            sulc2[3] = sitk.Flip(sulc2[3], [False, False, True])
-            
-        # register the sulci with ICP
-        s1_points = np.stack(np.where(sitk.GetArrayFromImage(sulc[3]))).T
-        s2_points = np.stack(np.where(sitk.GetArrayFromImage(sulc2[3]))).T
-        
-        # finds the transformation matrix sending a to b
-        _, __, cost_s1_to_s2 = trimesh.registration.icp(a=s1_points, b=s2_points, max_iterations=1000)
-        _, __, cost_s2_to_s1 = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000)
-        
-        dists.append(min(cost_s1_to_s2, cost_s2_to_s1))
-        
-        reg_keys.append(f'{sulc[0]}_{sulc[1]}-{sulc2[0]}_{sulc2[1]}')
 
     return dists, reg_keys
 
@@ -236,25 +241,19 @@ def sulcus_dist(sulc: list, sulclist: list[list] = sulci_list):
 sulci_distance_matrix = []
 sulci_reg_keys = []
 
-with mp.Pool(1) as p:
-    r = list(tqdm(p.imap(sulcus_dist, sulci_list[:1]), total=1))
-sulci_distance_matrix = [x[0] for x in r]
-sulci_reg_keys = [x[1] for x in r]
+# with mp.Pool(48) as p:
+#     r = list(tqdm(p.imap(sulcus_dist, sulci_list[:1]), total=1))
+    
+for s in tqdm(sulci_list):
+    dists, reg_keys = sulcus_dist(s)
+    sulci_distance_matrix.append(dists)
+    sulci_reg_keys.append(reg_keys)
+
+# sulci_distance_matrix = [x[0] for x in r]
+# sulci_reg_keys = [x[1] for x in r]
 
 sulci_distance_matrix = np.array(sulci_distance_matrix)
 sulci_reg_keys = np.array(sulci_reg_keys)
 
 np.save('./sulci_distance_matrix.npy', sulci_distance_matrix)
 np.save('./sulci_reg_keys.npy', sulci_reg_keys)
-
-# %%
-sulci_distance_matrix = np.array(sulci_distance_matrix)
-sulci_reg_keys = np.array(sulci_reg_keys)
-
-np.save('./sulci_distance_matrix.npy', sulci_distance_matrix)
-np.save('./sulci_reg_keys.npy', sulci_reg_keys)
-
-# %%
-
-
-
