@@ -77,8 +77,8 @@ class SPAM:
         isomap_feat_values = []
         all_spam_sulci = []
         # go for each ISOMAP feature and sample uniformly from it
-        spam_sulci = []
         for i in tqdm(range(sdm_trasformed.shape[1])):
+            spam_sulci = []
             isomap_feat = sdm_trasformed[:, i]
 
             # sample uniformly from the feature space
@@ -90,8 +90,10 @@ class SPAM:
             # calculate the distance to all sulci for given sampled point from the feature space
             for v in sample_idx:
                 dist = (isomap_feat - v)**2
-                spam_sulci.append(self.get_spam(dist),
-                                  l=l, top_prcn=top_prcn)
+                spam_sulci.append(self.get_spam(dist,
+                                                l=l,
+                                                top_prcn=top_prcn)
+                                  )
             all_spam_sulci.append(spam_sulci)
         return all_spam_sulci, isomap_feat_values
 
