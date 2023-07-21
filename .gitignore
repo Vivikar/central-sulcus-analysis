@@ -151,4 +151,4 @@ sulci_segm_logs/
 *.npy
 *.pkl
 *.minf
-shape_feaures/meshes/
+shape_features/meshes

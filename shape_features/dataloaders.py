@@ -142,3 +142,6 @@ class VIA11_Corrected_CS_Loader(Dataset):
             sulci_list.append(['right', s['subject_id'], s['type'],
                                rsegm])
         return sulci_list
+
+    def __str__(self) -> str:
+        return f'VIA11_Corrected_CS_Loader(bv_good={self.bv_good}, corrected={self.corrected}, all_bv={self.all_bv})'

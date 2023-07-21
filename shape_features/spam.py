@@ -133,3 +133,5 @@ class SPAM:
         spam_sulcus = sitk.GetArrayFromImage(spam_sulcus)
 
         return spam_sulcus
+    def __str__(self) -> str:
+        return f'SPAM with {len(self.sulci_list)} sulci and average sulcus {self.average_sulcus[0]}_{self.average_sulcus[1]}'
