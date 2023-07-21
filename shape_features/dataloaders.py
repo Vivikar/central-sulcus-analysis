@@ -137,6 +137,8 @@ class VIA11_Corrected_CS_Loader(Dataset):
             lsegm = s['lsegm'] if self.preload else sitk.ReadImage(s['lsegm'])
             rsegm = s['rsegm'] if self.preload else sitk.ReadImage(s['rsegm'])
 
-            sulci_list.append(['left', s['subject_id'], s['type'], lsegm])
-            sulci_list.append(['right', s['subject_id'], s['type'], rsegm])
+            sulci_list.append(['left', s['subject_id'], s['type'],
+                               lsegm])
+            sulci_list.append(['right', s['subject_id'], s['type'],
+                               rsegm])
         return sulci_list
