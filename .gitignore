@@ -145,3 +145,10 @@ logs_sst/
 sst_logs/
 finetuning_logs/
 sulci_segm_logs/
+
+*.nii.gz
+*.ply
+*.npy
+*.pkl
+*.minf
+shape_feaures/meshes/
