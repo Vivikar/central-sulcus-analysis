@@ -71,8 +71,8 @@ class SPAM:
                              l: float = 20,
                              top_prcn = 0.1,):
         # fitting ISOMAP with the sulci distance matrix (all to all)
-        iso = Isomap(n_components=isomap_components, n_jobs=-1, n_neighbors=n_neighbors, radius=None)
-        sdm_trasformed = iso.fit_transform(self.sulci_distance_matrix)
+        self.iso = Isomap(n_components=isomap_components, n_jobs=-1, n_neighbors=n_neighbors, radius=None)
+        sdm_trasformed = self.iso.fit_transform(self.sulci_distance_matrix)
 
         isomap_feat_values = []
         all_spam_sulci = []

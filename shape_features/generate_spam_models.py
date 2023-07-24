@@ -92,21 +92,21 @@ def save_mesh(segm_array:np.ndarray,
               template_img:sitk.Image=None,):
     # smooth the segmentation
     segm_array = gaussian_filter(segm_array, sigma=sigma)
-    
+
     # binarize the segmentation
     segm_array = (segm_array >= bin_thresh).astype(np.int16)
-    
+
     segm_img = sitk.GetImageFromArray(segm_array)
     if template_img is not None:
         segm_img.CopyInformation(template_img)
-    
+
     # save the segmentation
     sitk.WriteImage(segm_img, save_path/f'{label}.nii.gz')
-    
+
     # transform it into a mesh
     cmd = ['/mrhome/vladyslavz/portable_apps/brainvisa4_5/bin/AimsMeshBrain', '-i', save_path/f'{label}.nii.gz', '-o', save_path/f'{label}.ply']
     subprocess.run(cmd, shell=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
+
     os.remove(save_path/f'{label}.nii.gz')
     os.remove(save_path/f'{label}.ply.minf')
 
@@ -121,4 +121,3 @@ for f in range(len(all_spam_sulci)):
         save_mesh(s, sigma=sigma,
                 bin_thresh=bin_thresh,
                 label=f'test{i}', save_path=save_path_f, template_img=orig_img)
-
