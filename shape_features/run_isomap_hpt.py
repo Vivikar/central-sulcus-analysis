@@ -40,16 +40,13 @@ for nn in tqdm(range(2, 50)):
             isomap = Isomap(n_components=d, n_neighbors=nn, n_jobs=-1)
             isomap.fit(M_dist)
             e_dist = isomap.reconstruction_error()
-            isomap = Isomap(n_components=d, n_neighbors=nn, n_jobs=-1)
-            isomap.fit(M_rand)
-            e_rand = isomap.reconstruction_error()
-            dists_proportions.append(e_rand/e_dist)
+            dists_proportions.append(e_dist)
         except:
             dists_proportions.append(dists_proportions[-1])
     hp_resuluts.append(dists_proportions)
 
 # %%
-pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts.pkl')
+pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts_error.pkl')
 
 # %%
 
