@@ -33,20 +33,26 @@ M_rand = (M_rand/np.mean(M_rand))*np.mean(M_dist)
 
 hp_resuluts = []
 
-for nn in tqdm(range(2, 50)):
+for nn in tqdm(range(2, 100)):
     dists_proportions = []
     for d in range(1, M_rand.shape[0]):
         try:
             isomap = Isomap(n_components=d, n_neighbors=nn, n_jobs=-1)
             isomap.fit(M_dist)
             e_dist = isomap.reconstruction_error()
-            dists_proportions.append(e_dist)
+
+            isomap = Isomap(n_components=d, n_neighbors=nn, n_jobs=-1)
+            isomap.fit(M_rand)
+            e_rand = isomap.reconstruction_error()
+
+            dists_proportions.append((e_dist, e_rand/e_dist))
+
         except:
             dists_proportions.append(dists_proportions[-1])
     hp_resuluts.append(dists_proportions)
 
 # %%
-pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts_error.pkl')
+pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts_error_ext_double.pkl')
 
 # %%
 

@@ -72,14 +72,14 @@ class SPAM:
                              top_prcn = 0.1,):
         # fitting ISOMAP with the sulci distance matrix (all to all)
         self.iso = Isomap(n_components=isomap_components, n_jobs=-1, n_neighbors=n_neighbors, radius=None)
-        sdm_trasformed = self.iso.fit_transform(self.sulci_distance_matrix)
+        self.sdm_trasformed = self.iso.fit_transform(self.sulci_distance_matrix)
 
         isomap_feat_values = []
         all_spam_sulci = []
         # go for each ISOMAP feature and sample uniformly from it
-        for i in tqdm(range(sdm_trasformed.shape[1])):
+        for i in tqdm(range(self.sdm_trasformed.shape[1])):
             spam_sulci = []
-            isomap_feat = sdm_trasformed[:, i]
+            isomap_feat = self.sdm_trasformed[:, i]
 
             # sample uniformly from the feature space
             sample_idx = np.linspace(min(isomap_feat),

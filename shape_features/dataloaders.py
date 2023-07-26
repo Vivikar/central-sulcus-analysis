@@ -5,7 +5,7 @@ import pandas as pd
 import SimpleITK as sitk
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+from collections import defaultdict
 
 class VIA11_Corrected_CS_Loader(Dataset):
     def __init__(self,
@@ -38,6 +38,8 @@ class VIA11_Corrected_CS_Loader(Dataset):
         #               '}
         self.cs_segmentations = []
         self._load_data()
+        
+        self._reverse_idxation()
 
     def __len__(self):
         return len(self.cs_segmentations)
@@ -145,3 +147,11 @@ class VIA11_Corrected_CS_Loader(Dataset):
 
     def __str__(self) -> str:
         return f'VIA11_Corrected_CS_Loader(bv_good={self.bv_good}, corrected={self.corrected}, all_bv={self.all_bv})'
+
+    def _reverse_idxation(self):
+        """Reverses the idxation of the sulci_list to be able to access the sulci
+        by their subject_id and type
+        """
+        self.idxation = dict()
+        for i, s in enumerate(self.cs_segmentations):
+            self.idxation[s['subject_id']] = s

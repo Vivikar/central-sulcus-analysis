@@ -41,7 +41,8 @@ parser.add_argument('--isomap_components', metavar='isomap_components', type=int
 parser.add_argument('--n_neighbors', metavar='n_neighbors', type=int, default=10)
 parser.add_argument('--sample_shapes_n', metavar='sample_shapes_n', type=int, default=10)
 parser.add_argument('--l', metavar='l', type=float, default=20)
-
+isomap_feat_values = None
+spam = None
 args = parser.parse_args()
 
 if args.spam_sulci is None:
@@ -84,7 +85,10 @@ else:
 # %%
 sigma = args.sigma
 bin_thresh = args.bin_thresh
-save_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/meshes/test').absolute()
+save_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/meshes/n30d21').absolute()
+save_path.mkdir(parents=True, exist_ok=True)
+
+pd.to_pickle((spam.iso, spam.sdm_trasformed), save_path/'spam_isomap_meta.pkl')
 
 def save_mesh(segm_array:np.ndarray,
               sigma:float, bin_thresh:np.float32,
@@ -120,4 +124,17 @@ for f in range(len(all_spam_sulci)):
     for i, s in tqdm(enumerate(all_spam_sulci[f]), total=len(all_spam_sulci[f])):
         save_mesh(s, sigma=sigma,
                 bin_thresh=bin_thresh,
-                label=f'test{i}', save_path=save_path_f, template_img=orig_img)
+                label=f'test{i}_{isomap_feat_values[f][i]}', save_path=save_path_f, template_img=orig_img)
+
+with open(save_path/'README.txt', 'w') as f:
+    f.write(f'bin_thresh={bin_thresh}\n')
+    f.write(f'sigma={sigma}\n')
+    f.write(f'isomap_components={args.isomap_components}\n')
+    f.write(f'n_neighbors={args.n_neighbors}\n')
+    f.write(f'sample_shapes_n={args.sample_shapes_n}\n')
+    f.write(f'l={args.l}\n')
+    f.write(f'sulci_list={args.sulci_list}\n')
+    f.write(f'sulci_distance_matrix={args.sulci_distance_matrix}\n')
+    f.write(f'spam={args.spam}\n')
+    f.write(f'spam_sulci={args.spam_sulci}\n')
+    f.write(f'isomap_feat_values={isomap_feat_values}\n')
