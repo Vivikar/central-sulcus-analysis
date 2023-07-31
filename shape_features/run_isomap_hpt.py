@@ -15,10 +15,12 @@ data_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/
 
 # %%
 print(f'Loading sulci distance matrix from {data_path.parent.parent.parent}')
-sulci_distance_matrix = np.load(data_path.parent.parent.parent/'sulci_distance_matrix.npy')
-sulci_reg_keys = np.load(data_path.parent.parent.parent/'sulci_reg_keys.npy')
+sulci_distance_matrix = np.load(data_path.parent.parent.parent/'sulci_distance_matrix_corr.npy')
+sulci_reg_keys = np.load(data_path.parent.parent.parent/'sulci_reg_keys_corr.npy')
 print(f'Using sulci distance matrix {sulci_distance_matrix.shape} and keys {sulci_reg_keys.shape}')
 # np.shape(sulci_distance_matrix)
+
+# sulci_distance_matrix = sulci_distance_matrix + sulci_distance_matrix.T
 
 # %% [markdown]
 # # Choosing d-dimensionality for ISOMAP
@@ -33,9 +35,9 @@ M_rand = (M_rand/np.mean(M_rand))*np.mean(M_dist)
 
 hp_resuluts = []
 
-for nn in tqdm(range(2, 100)):
+for nn in tqdm(range(3, 100)):
     dists_proportions = []
-    for d in range(1, M_rand.shape[0]):
+    for d in range(2, M_rand.shape[0]-1):
         try:
             isomap = Isomap(n_components=d, n_neighbors=nn, n_jobs=-1)
             isomap.fit(M_dist)
@@ -52,7 +54,7 @@ for nn in tqdm(range(2, 100)):
     hp_resuluts.append(dists_proportions)
 
 # %%
-pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts_error_ext_double.pkl')
+pd.to_pickle(hp_resuluts, '/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/hp_resuluts_error_ext_double_corr.pkl')
 
 # %%
 

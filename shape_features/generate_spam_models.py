@@ -35,8 +35,8 @@ parser.add_argument('--sulci_distance_matrix', metavar='sulci_distance_matrix',
                     type=str, default=None)
 parser.add_argument('--spam', metavar='spam', type=str, default=None)
 parser.add_argument('--spam_sulci', metavar='spam_sulci', type=str, default=None)
-parser.add_argument('--sigma', metavar='sigma', type=float, default=0.8)
-parser.add_argument('--bin_thresh', metavar='bin_thresh', type=float, default=0.2)
+parser.add_argument('--sigma', metavar='sigma', type=float, default=0.95)
+parser.add_argument('--bin_thresh', metavar='bin_thresh', type=float, default=0.08)
 parser.add_argument('--isomap_components', metavar='isomap_components', type=int, default=10)
 parser.add_argument('--n_neighbors', metavar='n_neighbors', type=int, default=10)
 parser.add_argument('--sample_shapes_n', metavar='sample_shapes_n', type=int, default=10)
@@ -48,44 +48,44 @@ args = parser.parse_args()
 if args.spam_sulci is None:
     if args.sulci_list is not None:
         print(f'Loading sulci list from file {args.sulci_list}')
-        cs_ds, sulci_list = pd.read_pickle(data_path/args.sulci_list)
+        # cs_ds, sulci_list = pd.read_pickle(data_path/args.sulci_list)
     else:
         cs_ds = VIA11_Corrected_CS_Loader(bv_good=True, corrected=True, all_bv=False, preload=True)
         # unravell all the sulci
         sulci_list = cs_ds.get_subjects()
-        pd.to_pickle((cs_ds, sulci_list), data_path/'sulci_list.pkl')
+        # pd.to_pickle((cs_ds, sulci_list), data_path/'sulci_list.pkl')
 
     print(f'Using {cs_ds}', f'\nNumber of subjects: {len(cs_ds)}')
 
 
     print(f'Loading sulci distance matrix from {data_path.parent.parent.parent}')
-    sulci_distance_matrix = np.load(data_path.parent.parent.parent/'sulci_distance_matrix.npy')
-    sulci_reg_keys = np.load(data_path.parent.parent.parent/'sulci_reg_keys.npy')
+    sulci_distance_matrix = np.load(data_path.parent.parent.parent/'sulci_distance_matrix_corr_mir.npy')
+    sulci_reg_keys = np.load(data_path.parent.parent.parent/'sulci_reg_keys_corr.npy')
     print(f'Using sulci distance matrix {sulci_distance_matrix.shape} and keys {sulci_reg_keys.shape}')
 
     if args.spam is not None:
         print(f'Loading SPAM from {args.spam}')
-        spam = pd.read_pickle(data_path/args.spam)
+        # spam = pd.read_pickle(data_path/args.spam)
     else:
         spam = SPAM(sulci_list, sulci_distance_matrix)
-        pd.to_pickle(spam, data_path/'spam.pkl')
+        # pd.to_pickle(spam, data_path/'spam.pkl')
     print(f'Using SPAM {spam}')
 
-    all_spam_sulci, isomap_feat_values = spam.retrieve_isomap_spams(sample_shapes_n=20,
+    all_spam_sulci, isomap_feat_values = spam.retrieve_isomap_spams(sample_shapes_n=args.sample_shapes_n,
                                             isomap_components=args.isomap_components,
                                             n_neighbors=args.n_neighbors,
                                             l=args.l,)
-    pd.to_pickle((all_spam_sulci, isomap_feat_values), data_path/'spam_sulci.pkl')
+    # pd.to_pickle((all_spam_sulci, isomap_feat_values), data_path/'spam_sulci.pkl')
 
 else:
     print(f'Loading SPAM sulci from {data_path/args.spam_sulci}')
-    all_spam_sulci, isomap_feat_values = pd.read_pickle(data_path/args.spam_sulci)
+    # all_spam_sulci, isomap_feat_values = pd.read_pickle(data_path/args.spam_sulci)
 
 
 # %%
 sigma = args.sigma
 bin_thresh = args.bin_thresh
-save_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/meshes/n30d21').absolute()
+save_path = Path('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/meshes/n20d24_corr').absolute()
 save_path.mkdir(parents=True, exist_ok=True)
 
 pd.to_pickle((spam.iso, spam.sdm_trasformed), save_path/'spam_isomap_meta.pkl')

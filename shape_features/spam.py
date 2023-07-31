@@ -52,7 +52,8 @@ class SPAM:
             s2_points = np.stack(np.where(sitk.GetArrayFromImage(sulc2[3]))).T
 
             # finds the transformation matrix sending a to b
-            _, transformed, __ = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000)
+            _, transformed, __ = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000,
+                                                          scale=False)
 
             transformed_img = np.zeros_like(sitk.GetArrayFromImage(sulc2[3]))
             transformed_img[tuple(np.round(transformed).astype(int).T)] = 1

@@ -28,8 +28,10 @@ def process_sulc_pair(x):
     s2_points = np.stack(np.where(sitk.GetArrayFromImage(sulc2[3]))).T
 
     # finds the transformation matrix sending a to b
-    _, __, cost_s1_to_s2 = trimesh.registration.icp(a=s1_points, b=s2_points, max_iterations=1000)
-    _, __, cost_s2_to_s1 = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000)
+    _, __, cost_s1_to_s2 = trimesh.registration.icp(a=s1_points, b=s2_points, max_iterations=1000,
+                                                    scale=False)
+    _, __, cost_s2_to_s1 = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000,
+                                                    scale=False)
 
     return min(cost_s1_to_s2, cost_s2_to_s1), f'{sulc[0]}_{sulc[1]}-{sulc2[0]}_{sulc2[1]}'
 

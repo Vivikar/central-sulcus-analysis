@@ -27,8 +27,43 @@ from scipy.ndimage import gaussian_filter
 
 from dataloaders import VIA11_Corrected_CS_Loader
 
-from spam import SPAM
 
+# create a 3d cross structuring element
+
+se_3d_cross = np.array([[[0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0]],
+                       
+                        [ [0, 0, 0, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 0, 0, 0, 0]],
+                        
+                        
+                        [ [0, 0, 1, 0, 0],
+                          [0, 1, 1, 1, 0],
+                          [1, 1, 1, 1, 1],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 1, 0, 0]],
+                        
+                        [ [0, 0, 0, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 1, 1, 1, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 0, 0, 0, 0]],
+                        
+                        [ [0, 0, 0, 0, 0],
+                          [0, 0, 0, 0, 0],
+                          [0, 0, 1, 0, 0],
+                          [0, 0, 0, 0, 0],
+                          [0, 0, 0, 0, 0]]])
+                         
+
+from spam import SPAM
+from skimage.morphology import binary_dilation, binary_erosion, disk, binary_closing, ball
 
 from pathlib import Path
 
@@ -87,8 +122,16 @@ i = sitk.ReadImage('/mnt/projects/VIA_Vlad/nobackup/BrainVisa/CS_edited/DRCMR/LS
 print('Creating ply files')
 for subjidx in tqdm(range(len(spam.sulci_list))):
     subj  = spam.sulci_list[subjidx]
-    print(str(allsubj_meshp/f'{subj[1]}_{subj[0]}.nii.gz'))
+    # print(str(allsubj_meshp/f'{subj[1]}_{subj[0]}.nii.gz'))
     # ['left', s['subject_id'], s['type'], sitk.Image]
+    
+    # remove holes
+    sub_img = sitk.GetArrayFromImage(subj[3])
+    # sub_img = binary_dilation(sub_img, selem=ball(3)).astype(np.int16)
+    sub_img = binary_closing(sub_img, se_3d_cross).astype(np.int16)
+    sub_img = sitk.GetImageFromArray(sub_img)
+    subj[3] = sub_img
+    
     subj[3] = sitk.Cast(subj[3], sitk.sitkInt16)
     subj[3].CopyInformation(i)
     img_saved = sitk.WriteImage(subj[3],
@@ -101,16 +144,3 @@ for subjidx in tqdm(range(len(spam.sulci_list))):
     print(str(allsubj_meshp/f'{subj[1]}_{subj[0]}.ply'))
     # os.remove(str(allsubj_meshp/f'{subj[1]}_{subj[0]}.nii.gz'))
     # os.remove(str(allsubj_meshp/f'{subj[1]}_{subj[0]}.ply.minf'))
-
-print('Creating png files')
-for meshf in tqdm(allsubj_meshp.glob('*.ply')):
-    print(meshf)
-    plotter = pv.Plotter(off_screen=True, line_smoothing=True, polygon_smoothing=True)
-    mesh = pv.read(str(meshf))
-    actor = plotter.add_mesh(mesh, color='white', smooth_shading=True)
-    plt.imshow(plotter.screenshot(transparent_background=True))
-    plt.axis('off')
-    plt.savefig(allsubj_meshp/('imgs/' + meshf.name).replace('.ply', '.png'), bbox_inches='tight', pad_inches=0, dpi=300,
-                transparent=True)
-    plt.close()
-    plotter.close()
