@@ -113,6 +113,7 @@ class VIA11_Corrected_CS_Loader(Dataset):
 
                 lsegmpath = f'/mnt/projects/VIA_Vlad/nobackup/BrainVisa/BrainVisa/{metadata.sites}/{subj}/t1mri/default_acquisition/default_analysis/folds/3.1/default_session_best/segmentation/LSulci_{subj}_default_session_best.nii.gz'
                 resgmpath = lsegmpath.replace('LSulci', 'RSulci')
+                
                 lmeshpath = lsegmpath.replace('.nii.gz', '.ply')
                 rmeshpath = lmeshpath.replace('LSulci', 'RSulci')
 
