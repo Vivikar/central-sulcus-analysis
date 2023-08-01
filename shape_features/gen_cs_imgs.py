@@ -63,7 +63,6 @@ se_3d_cross = np.array([[[0, 0, 0, 0, 0],
                          
 
 from spam import SPAM
-from skimage.morphology import binary_dilation, binary_erosion, disk, binary_closing, ball
 
 from pathlib import Path
 
@@ -128,7 +127,7 @@ for subjidx in tqdm(range(len(spam.sulci_list))):
     # remove holes
     sub_img = sitk.GetArrayFromImage(subj[3])
     # sub_img = binary_dilation(sub_img, selem=ball(3)).astype(np.int16)
-    sub_img = binary_closing(sub_img, se_3d_cross).astype(np.int16)
+    # sub_img = binary_closing(sub_img, se_3d_cross).astype(np.int16)
     sub_img = sitk.GetImageFromArray(sub_img)
     subj[3] = sub_img
     
