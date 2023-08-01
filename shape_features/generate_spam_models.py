@@ -17,7 +17,7 @@ from scipy.ndimage import gaussian_filter
 from dataloaders import VIA11_Corrected_CS_Loader
 
 from spam import SPAM
-
+from shape_utils import interpolate_segmentation
 
 from pathlib import Path
 

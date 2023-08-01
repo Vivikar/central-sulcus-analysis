@@ -4,6 +4,7 @@ import trimesh
 from tqdm import tqdm
 from scipy.ndimage import gaussian_filter
 from sklearn.manifold import Isomap
+from shape_utils import interpolate_segmentation
 
 class SPAM:
     def __init__(self, sulci_list: list[list],
@@ -52,11 +53,15 @@ class SPAM:
             s2_points = np.stack(np.where(sitk.GetArrayFromImage(sulc2[3]))).T
 
             # finds the transformation matrix sending a to b
-            _, transformed, __ = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000,
+            trnsh_mat, transformed, __ = trimesh.registration.icp(a=s2_points, b=s1_points, max_iterations=1000,
                                                           scale=False)
 
-            transformed_img = np.zeros_like(sitk.GetArrayFromImage(sulc2[3]))
-            transformed_img[tuple(np.round(transformed).astype(int).T)] = 1
+            transformed_img = interpolate_segmentation(imageA=sitk.GetArrayFromImage(sulc2[3]),
+                                                       imageB_shape=sitk.GetArrayFromImage(sulcus[3]).shape,
+                                                       pointsAregistered2B=transformed,
+                                                       trnsh_mat=trnsh_mat,
+                                                       spline_order=1)
+
             transformed_img = sitk.GetImageFromArray(transformed_img.astype(np.float32))
 
             res_sulci = sulc2.copy()
