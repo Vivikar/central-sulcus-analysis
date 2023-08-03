@@ -152,3 +152,4 @@ sulci_segm_logs/
 *.pkl
 *.minf
 shape_features/meshes
+shape_features/results

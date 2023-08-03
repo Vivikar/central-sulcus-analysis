@@ -58,9 +58,9 @@ if args.spam_sulci is None:
     print(f'Using {cs_ds}', f'\nNumber of subjects: {len(cs_ds)}')
 
 
-    print(f'Loading sulci distance matrix from {data_path.parent.parent.parent}')
-    sulci_distance_matrix = np.load(data_path.parent.parent.parent/'sulci_distance_matrix_corr_mir.npy')
-    sulci_reg_keys = np.load(data_path.parent.parent.parent/'sulci_reg_keys_corr.npy')
+    print(f'Loading sulci distance matrix from {data_path}')
+    sulci_distance_matrix = np.load(data_path/'sulci_distance_matrix_corr_mir.npy')
+    sulci_reg_keys = np.load(data_path/'sulci_reg_keys_corr.npy')
     print(f'Using sulci distance matrix {sulci_distance_matrix.shape} and keys {sulci_reg_keys.shape}')
 
     if args.spam is not None:

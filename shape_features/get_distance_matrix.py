@@ -43,5 +43,5 @@ for s in tqdm(sulci_list):
 sulci_distance_matrix = np.array(sulci_distance_matrix)
 sulci_reg_keys = np.array(sulci_reg_keys)
 
-np.save('./sulci_distance_matrix_corr.npy', sulci_distance_matrix)
-np.save('./sulci_reg_keys_corr.npy', sulci_reg_keys)
+np.save('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/sulci_distance_matrix_corr.npy', sulci_distance_matrix)
+np.save('/mrhome/vladyslavz/git/central-sulcus-analysis/shape_features/data/nobackup/sulci_reg_keys_corr.npy', sulci_reg_keys)
